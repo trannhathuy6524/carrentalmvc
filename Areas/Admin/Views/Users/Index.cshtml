@@ -1,0 +1,345 @@
+﻿@using carrentalmvc.Models.Enums
+@model IEnumerable<carrentalmvc.Models.ApplicationUser>
+@{
+    ViewData["Title"] = "Quản lý người dùng";
+
+    // Filters & pagination from ViewBag
+    var searchTerm = ViewBag.SearchTerm as string ?? string.Empty;
+    UserType? filterUserType = ViewBag.UserType as UserType?;
+    bool? filterIsActive = ViewBag.IsActive as bool?;
+    bool? filterIsVerified = ViewBag.IsVerified as bool?;
+
+    var pageNumber = ViewBag.PageNumber != null ? (int)ViewBag.PageNumber : 1;
+    var totalPages = ViewBag.TotalPages != null ? (int)ViewBag.TotalPages : 1;
+    var totalCount = ViewBag.TotalCount != null ? (int)ViewBag.TotalCount : Model.Count();
+    var pageSize = ViewBag.PageSize != null ? (int)ViewBag.PageSize : 10;
+}
+
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2"><i class="fas fa-users"></i> Quản lý người dùng</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <div class="btn-group me-2">
+            <button type="button" class="btn btn-sm btn-outline-secondary">
+                <i class="fas fa-download"></i> Xuất Excel
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Filters -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="get" asp-action="Index">
+            <div class="row">
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label for="searchTerm">Tìm kiếm</label>
+                        <input name="searchTerm" value="@searchTerm" class="form-control" placeholder="Tìm theo tên, email, SĐT..." />
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="form-group">
+                        <label for="userType">Loại tài khoản</label>
+                        <select name="userType" class="form-select">
+                            <option value="">Tất cả</option>
+                            @foreach (UserType ut in Enum.GetValues(typeof(UserType)))
+                            {
+                                var val = (int)ut;
+                                var text = GetUserTypeText(ut);
+                                if (filterUserType.HasValue && filterUserType.Value == ut)
+                                {
+                                    <option value="@val" selected="selected">@text</option>
+                                }
+                                else
+                                {
+                                    <option value="@val">@text</option>
+                                }
+                            }
+                        </select>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="form-group">
+                        <label for="isActive">Trạng thái</label>
+                        <select name="isActive" class="form-select">
+                            <option value="">Tất cả</option>
+                            @if (filterIsActive.HasValue && filterIsActive.Value)
+                            {
+                                <option value="true" selected="selected">Đang hoạt động</option>
+                            }
+                            else
+                            {
+                                <option value="true">Đang hoạt động</option>
+                            }
+                            @if (filterIsActive.HasValue && !filterIsActive.Value)
+                            {
+                                <option value="false" selected="selected">Bị khóa</option>
+                            }
+                            else
+                            {
+                                <option value="false">Bị khóa</option>
+                            }
+                        </select>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="form-group">
+                        <label for="isVerified">Xác thực</label>
+                        <select name="isVerified" class="form-select">
+                            <option value="">Tất cả</option>
+                            @if (filterIsVerified.HasValue && filterIsVerified.Value)
+                            {
+                                <option value="true" selected="selected">Đã xác thực</option>
+                            }
+                            else
+                            {
+                                <option value="true">Đã xác thực</option>
+                            }
+                            @if (filterIsVerified.HasValue && !filterIsVerified.Value)
+                            {
+                                <option value="false" selected="selected">Chưa xác thực</option>
+                            }
+                            else
+                            {
+                                <option value="false">Chưa xác thực</option>
+                            }
+                        </select>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label>&nbsp;</label>
+                        <div class="d-flex">
+                            <button type="submit" class="btn btn-primary me-2">
+                                <i class="fas fa-search"></i> Tìm kiếm
+                            </button>
+                            <a asp-action="Index" class="btn btn-outline-secondary">
+                                <i class="fas fa-times"></i> Xóa bộ lọc
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Users List -->
+<div class="card">
+    <div class="card-header">
+        <div class="d-flex justify-content-between align-items-center">
+            <h6 class="mb-0">Danh sách người dùng</h6>
+            <span class="badge bg-primary">Tổng: @totalCount</span>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        @if (Model.Any())
+        {
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Thông tin</th>
+                            <th>Loại tài khoản</th>
+                            <th>Trạng thái</th>
+                            <th>Thống kê</th>
+                            <th>Ngày tạo</th>
+                            <th class="text-center">Thao tác</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var user in Model)
+                        {
+                            var totalCars = user.Cars?.Count ?? 0;
+                            var totalRentals = user.Rentals?.Count ?? 0;
+                            var totalReviews = user.Reviews?.Count ?? 0;
+
+                            <tr>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <div class="avatar me-3">
+                                            @if (!string.IsNullOrEmpty(user.Avatar))
+                                            {
+                                                <img src="@user.Avatar" alt="Avatar" class="rounded-circle" width="40" height="40">
+                                            }
+                                            else
+                                            {
+                                                <div class="bg-primary rounded-circle d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                                                    <i class="fas fa-user text-white"></i>
+                                                </div>
+                                            }
+                                        </div>
+                                        <div>
+                                            <div class="fw-bold">@user.FullName</div>
+                                            <small class="text-muted">@user.Email</small>
+                                            @if (!string.IsNullOrEmpty(user.PhoneNumber))
+                                            {
+                                                <br />
+                                                <small class="text-muted">@user.PhoneNumber</small>
+                                            }
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="badge bg-@(GetUserTypeBadgeClass(user.UserType))">
+                                        @GetUserTypeText(user.UserType)
+                                    </span>
+                                </td>
+                                <td>
+                                    <div>
+                                        <span class="badge bg-@(user.IsActive ? "success" : "danger")">
+                                            @(user.IsActive ? "Hoạt động" : "Bị khóa")
+                                        </span>
+                                        <br />
+                                        <span class="badge bg-@(user.IsVerified ? "info" : "warning") mt-1">
+                                            @(user.IsVerified ? "Đã xác thực" : "Chưa xác thực")
+                                        </span>
+                                    </div>
+                                </td>
+                                <td>
+                                    <small>
+                                        @if (user.UserType == UserType.Owner)
+                                        {
+                                            <div><i class="fas fa-car"></i> @totalCars xe</div>
+                                        }
+                                        @if (user.UserType == UserType.Customer)
+                                        {
+                                            <div><i class="fas fa-file-contract"></i> @totalRentals thuê</div>
+                                        }
+                                        <div><i class="fas fa-star"></i> @totalReviews đánh giá</div>
+                                    </small>
+                                </td>
+                                <td>
+                                    <small>@user.CreatedAt.ToString("dd/MM/yyyy")</small>
+                                </td>
+                                <td class="text-center">
+                                    <div class="btn-group" role="group">
+                                        <a asp-action="Details" asp-route-id="@user.Id"
+                                           class="btn btn-sm btn-outline-primary" title="Xem chi tiết">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                        <div class="btn-group" role="group">
+                                            <button type="button" class="btn btn-sm btn-outline-secondary dropdown-toggle"
+                                                    data-bs-toggle="dropdown" title="Thao tác khác">
+                                                <i class="fas fa-ellipsis-h"></i>
+                                            </button>
+                                            <ul class="dropdown-menu">
+                                                <li>
+                                                    <form asp-action="ToggleActive" asp-route-id="@user.Id" method="post" class="d-inline">
+                                                        @Html.AntiForgeryToken()
+                                                        <button type="submit" class="dropdown-item"
+                                                                onclick="return confirm('@(user.IsActive ? "Bạn có chắc muốn khóa tài khoản này?" : "Bạn có chắc muốn kích hoạt tài khoản này?")')">
+                                                            <i class="fas fa-@(user.IsActive ? "lock" : "unlock")"></i>
+                                                            @(user.IsActive ? "Khóa tài khoản" : "Kích hoạt")
+                                                        </button>
+                                                    </form>
+                                                </li>
+                                                <li>
+                                                    <form asp-action="ToggleVerified" asp-route-id="@user.Id" method="post" class="d-inline">
+                                                        @Html.AntiForgeryToken()
+                                                        <button type="submit" class="dropdown-item"
+                                                                onclick="return confirm('@(user.IsVerified ? "Bạn có chắc muốn hủy xác thực tài khoản này?" : "Bạn có chắc muốn xác thực tài khoản này?")')">
+                                                            <i class="fas fa-@(user.IsVerified ? "times" : "check")"></i>
+                                                            @(user.IsVerified ? "Hủy xác thực" : "Xác thực")
+                                                        </button>
+                                                    </form>
+                                                </li>
+                                                <li><hr class="dropdown-divider" /></li>
+                                                <li>
+                                                    <a asp-action="Delete" asp-route-id="@user.Id" class="dropdown-item text-danger">
+                                                        <i class="fas fa-trash"></i> Xóa
+                                                    </a>
+                                                </li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Pagination -->
+            @if (totalPages > 1)
+            {
+                <div class="card-footer">
+                    <nav aria-label="Users pagination">
+                        <ul class="pagination justify-content-center mb-0">
+                            <li class="page-item @(pageNumber == 1 ? "disabled" : "")">
+                                <a class="page-link" asp-route-page="@(pageNumber - 1)"
+                                   asp-route-searchTerm="@searchTerm"
+                                   asp-route-userType="@((int?)filterUserType)"
+                                   asp-route-isActive="@filterIsActive"
+                                   asp-route-isVerified="@filterIsVerified">
+                                    <i class="fas fa-chevron-left"></i>
+                                </a>
+                            </li>
+
+                            @for (int i = Math.Max(1, pageNumber - 2); i <= Math.Min(totalPages, pageNumber + 2); i++)
+                            {
+                                <li class="page-item @(i == pageNumber ? "active" : "")">
+                                    <a class="page-link" asp-route-page="@i"
+                                       asp-route-searchTerm="@searchTerm"
+                                       asp-route-userType="@((int?)filterUserType)"
+                                       asp-route-isActive="@filterIsActive"
+                                       asp-route-isVerified="@filterIsVerified">
+                                        @i
+                                    </a>
+                                </li>
+                            }
+
+                            <li class="page-item @(pageNumber >= totalPages ? "disabled" : "")">
+                                <a class="page-link" asp-route-page="@(pageNumber + 1)"
+                                   asp-route-searchTerm="@searchTerm"
+                                   asp-route-userType="@((int?)filterUserType)"
+                                   asp-route-isActive="@filterIsActive"
+                                   asp-route-isVerified="@filterIsVerified">
+                                    <i class="fas fa-chevron-right"></i>
+                                </a>
+                            </li>
+                        </ul>
+                    </nav>
+                    <div class="text-center mt-2">
+                        <small class="text-muted">
+                            Hiển thị @((pageNumber - 1) * pageSize + 1) - @Math.Min(pageNumber * pageSize, totalCount)
+                            trong tổng số @totalCount người dùng
+                        </small>
+                    </div>
+                </div>
+            }
+        }
+        else
+        {
+            <div class="text-center py-5">
+                <i class="fas fa-users fa-3x text-muted mb-3"></i>
+                <h5 class="text-muted">Không tìm thấy người dùng nào</h5>
+                <p class="text-muted">Thử thay đổi điều kiện tìm kiếm</p>
+            </div>
+        }
+    </div>
+</div>
+
+@functions {
+    private string GetUserTypeBadgeClass(carrentalmvc.Models.Enums.UserType userType)
+    {
+        return userType switch
+        {
+            carrentalmvc.Models.Enums.UserType.Admin => "danger",
+            carrentalmvc.Models.Enums.UserType.Owner => "warning",
+            carrentalmvc.Models.Enums.UserType.Customer => "primary",
+            _ => "secondary"
+        };
+    }
+
+    private string GetUserTypeText(carrentalmvc.Models.Enums.UserType userType)
+    {
+        return userType switch
+        {
+            carrentalmvc.Models.Enums.UserType.Admin => "Quản trị viên",
+            carrentalmvc.Models.Enums.UserType.Owner => "Chủ xe",
+            carrentalmvc.Models.Enums.UserType.Customer => "Khách hàng",
+            _ => "Không xác định"
+        };
+    }
+}

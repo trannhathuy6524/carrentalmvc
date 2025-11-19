@@ -1,0 +1,85 @@
+﻿@using Microsoft.AspNetCore.Identity
+@using carrentalmvc.Data.Constants
+@inject SignInManager<ApplicationUser> SignInManager
+@inject UserManager<ApplicationUser> UserManager
+
+<ul class="navbar-nav">
+@if (SignInManager.IsSignedIn(User))
+{
+    var user = await UserManager.GetUserAsync(User);
+    var isAdmin = User.IsInRole(RoleConstants.Admin);
+    var isCarOwner = User.IsInRole(RoleConstants.Owner);
+    var isDriver = User.IsInRole(RoleConstants.Driver);
+    var isCustomer = User.IsInRole(RoleConstants.Customer);
+
+    @if (isAdmin || isCarOwner || isDriver || isCustomer)
+    {
+        <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle text-dark" href="#" id="dashboardDropdown" role="button" 
+               data-bs-toggle="dropdown" aria-expanded="false">
+                <i class="fas fa-th-large"></i> Dashboard
+            </a>
+            <ul class="dropdown-menu" aria-labelledby="dashboardDropdown">
+                @if (isAdmin)
+                {
+                    <li>
+                        <a class="dropdown-item" asp-area="Admin" asp-controller="Dashboard" asp-action="Index">
+                            <i class="fas fa-user-shield"></i> Admin Panel
+                        </a>
+                    </li>
+                }
+                @if (isCarOwner)
+                {
+                    <li>
+                        <a class="dropdown-item" asp-area="CarOwner" asp-controller="Dashboard" asp-action="Index">
+                            <i class="fas fa-car"></i> Chủ xe
+                        </a>
+                    </li>
+                }
+                @if (isDriver)
+                {
+                    <li>
+                        <a class="dropdown-item" asp-area="Driver" asp-controller="Dashboard" asp-action="Index">
+                            <i class="fas fa-user-tie"></i> Tài xế
+                        </a>
+                    </li>
+                }
+                @if (isCustomer)
+                {
+                    <li>
+                        <a class="dropdown-item" asp-area="Customer" asp-controller="Rentals" asp-action="Index">
+                            <i class="fas fa-user"></i> Đơn thuê của tôi
+                        </a>
+                    </li>
+                }
+            </ul>
+        </li>
+    }
+
+    <li class="nav-item">
+        <a  class="nav-link text-dark" asp-area="Identity" asp-page="/Account/Manage/Index" title="Manage">
+            <i class="fas fa-user-circle"></i> @User.Identity?.Name!
+        </a>
+    </li>
+    <li class="nav-item">
+        <form  class="form-inline" asp-area="Identity" asp-page="/Account/Logout" asp-route-returnUrl="@Url.Action("Index", "Home", new { area = "" })">
+            <button  type="submit" class="nav-link btn btn-link text-dark">
+                <i class="fas fa-sign-out-alt"></i> Đăng xuất
+            </button>
+        </form>
+    </li>
+}
+else
+{
+    <li class="nav-item">
+        <a class="nav-link text-dark" asp-area="Identity" asp-page="/Account/Register">
+            <i class="fas fa-user-plus"></i> Đăng ký
+        </a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link text-dark" asp-area="Identity" asp-page="/Account/Login">
+            <i class="fas fa-sign-in-alt"></i> Đăng nhập
+        </a>
+    </li>
+}
+</ul>

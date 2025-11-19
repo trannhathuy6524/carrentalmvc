@@ -1,0 +1,123 @@
+@using carrentalmvc.Controllers
+@model DriverRequestViewModel
+@{
+    ViewData["Title"] = "Yêu cầu làm tài xế";
+}
+
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h3 class="mb-0">
+                        <i class="fas fa-steering-wheel"></i> @ViewData["Title"]
+                    </h3>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i>
+                        <strong>Lưu ý:</strong>
+                        <ul class="mb-0 mt-2">
+                            <li>Bạn cần có Giấy phép lái xe (GPLX) hợp lệ</li>
+                            <li>Chọn chủ xe bạn muốn làm việc cùng</li>
+                            <li>Sau khi gửi yêu cầu, chủ xe sẽ xem xét và phê duyệt</li>
+                            <li>Khi được duyệt, bạn sẽ thấy và nhận đơn thuê xe của chủ xe đó</li>
+                            <li><strong>💰 Lương tài xế cố định: 500,000 VNĐ/ngày</strong></li>
+                        </ul>
+                    </div>
+
+                    <form asp-action="Create" method="post">
+                        <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+
+                        <h5 class="mb-3">
+                            <i class="fas fa-user"></i> Thông tin cá nhân
+                        </h5>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label asp-for="FullName" class="form-label"></label>
+                                <input asp-for="FullName" class="form-control" readonly />
+                            </div>
+
+                            <div class="col-md-6 mb-3">
+                                <label asp-for="Email" class="form-label"></label>
+                                <input asp-for="Email" class="form-control" readonly />
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="PhoneNumber" class="form-label"></label>
+                            <input asp-for="PhoneNumber" class="form-control" readonly />
+                        </div>
+
+                        <hr class="my-4" />
+
+                        <h5 class="mb-3">
+                            <i class="fas fa-id-card"></i> Giấy tờ tùy thân
+                        </h5>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label asp-for="NationalId" class="form-label"></label>
+                                <input asp-for="NationalId" class="form-control" />
+                                <span asp-validation-for="NationalId" class="text-danger"></span>
+                            </div>
+
+                            <div class="col-md-6 mb-3">
+                                <label asp-for="DriverLicense" class="form-label"></label>
+                                <input asp-for="DriverLicense" class="form-control" />
+                                <span asp-validation-for="DriverLicense" class="text-danger"></span>
+                            </div>
+                        </div>
+
+                        <hr class="my-4" />
+
+                        <h5 class="mb-3">
+                            <i class="fas fa-user-tie"></i> Chọn chủ xe
+                        </h5>
+
+                        <div class="mb-3">
+                            <label asp-for="CarOwnerId" class="form-label"></label>
+                            <select asp-for="CarOwnerId" class="form-select" asp-items="ViewBag.CarOwners">
+                                <option value="">-- Chọn chủ xe --</option>
+                            </select>
+                            <span asp-validation-for="CarOwnerId" class="text-danger"></span>
+                            <small class="form-text text-muted">
+                                Bạn sẽ chỉ làm việc với chủ xe này và nhận các đơn thuê xe của họ
+                            </small>
+                        </div>
+
+                        <hr class="my-4" />
+
+                        <h5 class="mb-3">
+                            <i class="fas fa-edit"></i> Thông tin bổ sung
+                        </h5>
+
+                        <div class="mb-3">
+                            <label asp-for="Experience" class="form-label"></label>
+                            <textarea asp-for="Experience" class="form-control" rows="4" 
+                                      placeholder="Ví dụ: 5 năm kinh nghiệm lái xe, thành thạo xe số tự động và số sàn..."></textarea>
+                            <span asp-validation-for="Experience" class="text-danger"></span>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="Notes" class="form-label"></label>
+                            <textarea asp-for="Notes" class="form-control" rows="3" 
+                                      placeholder="Ghi chú thêm cho chủ xe (nếu có)"></textarea>
+                            <span asp-validation-for="Notes" class="text-danger"></span>
+                        </div>
+
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                <i class="fas fa-paper-plane"></i> Gửi yêu cầu
+                            </button>
+                            <a asp-controller="Home" asp-action="Index" class="btn btn-secondary">
+                                <i class="fas fa-times"></i> Hủy bỏ
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,123 @@
+﻿@model carrentalmvc.Models.Review
+@{
+    ViewData["Title"] = $"Xóa đánh giá - #{Model.ReviewId}";
+    var userAvatar = Model.User?.Avatar;
+    var userName = Model.User?.FullName ?? "N/A";
+    var carName = Model.Car?.Name ?? "N/A";
+}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2 text-danger"><i class="fas fa-trash"></i> Xóa đánh giá</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <div class="btn-group">
+            <a asp-action="Details" asp-route-id="@Model.ReviewId" class="btn btn-sm btn-outline-info">
+                <i class="fas fa-eye"></i> Xem chi tiết
+            </a>
+            <a asp-action="Index" class="btn btn-sm btn-outline-secondary">
+                <i class="fas fa-arrow-left"></i> Quay lại
+            </a>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card border-danger">
+            <div class="card-header bg-danger text-white">
+                <h6 class="mb-0"><i class="fas fa-exclamation-triangle"></i> Xác nhận xóa đánh giá</h6>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-danger">
+                    <h5><i class="fas fa-exclamation-triangle"></i> Cảnh báo!</h5>
+                    <p>Bạn có chắc chắn muốn xóa đánh giá này không?</p>
+                    <p class="mb-0">Hành động này không thể hoàn tác!</p>
+                </div>
+
+                <div class="bg-light p-3 rounded mb-4">
+                    <div class="d-flex align-items-start">
+                        @if (!string.IsNullOrEmpty(userAvatar))
+                        {
+                            <img src="@userAvatar" alt="Avatar" class="rounded-circle me-3" width="50" height="50">
+                        }
+                        else
+                        {
+                            <div class="bg-primary rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 50px; height: 50px;">
+                                <i class="fas fa-user text-white"></i>
+                            </div>
+                        }
+                        <div class="flex-grow-1">
+                            <div class="d-flex align-items-center mb-2">
+                                <h6 class="mb-0 me-2">@userName</h6>
+                                <div class="text-warning me-2">
+                                    @for (int i = 1; i <= 5; i++)
+                                    {
+                                        <i class="fas fa-star@(i <= Model.Rating ? "" : " text-muted")"></i>
+                                    }
+                                </div>
+                                <span class="badge bg-@(Model.Rating >= 4 ? "success" : Model.Rating >= 3 ? "warning" : "danger")">
+                                    @Model.Rating sao
+                                </span>
+                                @if (Model.IsRecommended)
+                                {
+                                    <span class="badge bg-info ms-1">Khuyến nghị</span>
+                                }
+                            </div>
+                            <p class="text-muted mb-1">Đánh giá cho: <strong>@carName</strong></p>
+                            @if (!string.IsNullOrEmpty(Model.Comment))
+                            {
+                                <p class="mb-0 fst-italic">"@Model.Comment"</p>
+                            }
+                            <small class="text-muted">@Model.CreatedAt.ToString("dd/MM/yyyy HH:mm")</small>
+                        </div>
+                    </div>
+                </div>
+
+                <form asp-action="Delete" asp-route-id="@Model.ReviewId" method="post">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="id" value="@Model.ReviewId" />
+                    <div class="d-flex justify-content-between">
+                        <a asp-action="Details" asp-route-id="@Model.ReviewId" class="btn btn-secondary">
+                            <i class="fas fa-times"></i> Hủy
+                        </a>
+                        <button type="submit" class="btn btn-danger"
+                                onclick="return confirm('Bạn có chắc chắn muốn xóa đánh giá này?')">
+                            <i class="fas fa-trash"></i> Xóa vĩnh viễn
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card border-info">
+            <div class="card-header bg-info text-white">
+                <h6 class="mb-0"><i class="fas fa-info-circle"></i> Thông tin đánh giá</h6>
+            </div>
+            <div class="card-body">
+                <dl class="row">
+                    <dt class="col-5">Mã:</dt>
+                    <dd class="col-7">#@Model.ReviewId</dd>
+
+                    <dt class="col-5">Người đánh giá:</dt>
+                    <dd class="col-7">@userName</dd>
+
+                    <dt class="col-5">Xe:</dt>
+                    <dd class="col-7">@carName</dd>
+
+                    <dt class="col-5">Đánh giá:</dt>
+                    <dd class="col-7">@Model.Rating/5 sao</dd>
+
+                    <dt class="col-5">Trạng thái:</dt>
+                    <dd class="col-7">
+                        <span class="badge bg-@(Model.IsActive ? "success" : "secondary")">
+                            @(Model.IsActive ? "Hiển thị" : "Đã ẩn")
+                        </span>
+                    </dd>
+
+                    <dt class="col-5">Ngày tạo:</dt>
+                    <dd class="col-7">@Model.CreatedAt.ToString("dd/MM/yyyy")</dd>
+                </dl>
+            </div>
+        </div>
+    </div>
+</div>

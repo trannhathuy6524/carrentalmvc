@@ -1,0 +1,164 @@
+﻿@using carrentalmvc.Models
+@model Brand
+
+@{
+    ViewData["Title"] = $"Xóa thương hiệu - {Model?.Name}";
+    var carCount = ViewBag.CarCount != null ? (int)ViewBag.CarCount : (Model?.Cars?.Count ?? 0);
+}
+
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2 text-danger"><i class="fas fa-trash"></i> Xóa thương hiệu</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <div class="btn-group">
+            <a asp-action="Details" asp-route-id="@Model?.BrandId" class="btn btn-sm btn-outline-info">
+                <i class="fas fa-eye"></i> Xem chi tiết
+            </a>
+            <a asp-action="Index" class="btn btn-sm btn-outline-secondary">
+                <i class="fas fa-arrow-left"></i> Quay lại
+            </a>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card border-danger">
+            <div class="card-header bg-danger text-white">
+                <h6 class="mb-0"><i class="fas fa-exclamation-triangle"></i> Xác nhận xóa thương hiệu</h6>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-danger">
+                    <h5><i class="fas fa-exclamation-triangle"></i> Cảnh báo!</h5>
+                    <p>Bạn có chắc chắn muốn xóa thương hiệu <strong>"@Model?.Name"</strong> không?</p>
+                    <p class="mb-0">Hành động này không thể hoàn tác!</p>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-3">
+                        @if (!string.IsNullOrEmpty(Model?.LogoUrl))
+                        {
+                            <img src="@Model.LogoUrl" alt="@Model.Name" class="img-fluid rounded">
+                        }
+                        else
+                        {
+                            <div class="bg-light rounded d-flex align-items-center justify-content-center" style="height: 100px;">
+                                <i class="fas fa-image fa-2x text-muted"></i>
+                            </div>
+                        }
+                    </div>
+                    <div class="col-md-9">
+                        <dl class="row">
+                            <dt class="col-sm-4">Tên thương hiệu:</dt>
+                            <dd class="col-sm-8"><strong>@Model?.Name</strong></dd>
+
+                            <dt class="col-sm-4">Mô tả:</dt>
+                            <dd class="col-sm-8">
+                                @if (!string.IsNullOrEmpty(Model?.Description))
+                                {
+                                    @Model.Description
+                                }
+                                else
+                                {
+                                    <em class="text-muted">Chưa có mô tả</em>
+                                }
+                            </dd>
+
+                            <dt class="col-sm-4">Số xe hiện tại:</dt>
+                            <dd class="col-sm-8">
+                                @if (carCount > 0)
+                                {
+                                    <span class="badge bg-warning text-dark">@carCount xe</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-secondary">0 xe</span>
+                                }
+                            </dd>
+
+                            <dt class="col-sm-4">Ngày tạo:</dt>
+                            <dd class="col-sm-8">@Model?.CreatedAt.ToString("dd/MM/yyyy HH:mm")</dd>
+                        </dl>
+                    </div>
+                </div>
+
+                @if (carCount == 0)
+                {
+                    <form asp-action="Delete" method="post" class="mt-4">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="id" value="@Model?.BrandId" />
+                        <div class="d-flex justify-content-between">
+                            <a asp-action="Details" asp-route-id="@Model?.BrandId" class="btn btn-secondary">
+                                <i class="fas fa-times"></i> Hủy
+                            </a>
+                            <button type="submit" class="btn btn-danger"
+                                    onclick="return confirm('Bạn có chắc chắn muốn xóa thương hiệu này?')">
+                                <i class="fas fa-trash"></i> Xóa vĩnh viễn
+                            </button>
+                        </div>
+                    </form>
+                }
+                else
+                {
+                    <div class="mt-4">
+                        <div class="d-flex justify-content-between">
+                            <a asp-action="Details" asp-route-id="@Model?.BrandId" class="btn btn-secondary">
+                                <i class="fas fa-times"></i> Hủy
+                            </a>
+                            <button type="button" class="btn btn-danger" disabled>
+                                <i class="fas fa-trash"></i> Không thể xóa
+                            </button>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        @if (carCount > 0)
+        {
+            <div class="card border-warning">
+                <div class="card-header bg-warning text-dark">
+                    <h6 class="mb-0"><i class="fas fa-exclamation-triangle"></i> Không thể xóa</h6>
+                </div>
+                <div class="card-body">
+                    <p>Thương hiệu này hiện có <strong>@carCount</strong> xe đang sử dụng.</p>
+                    <p>Bạn cần:</p>
+                    <ol>
+                        <li>Chuyển các xe sang thương hiệu khác</li>
+                        <li>Hoặc xóa tất cả xe thuộc thương hiệu này</li>
+                    </ol>
+                    <a asp-area="Admin" asp-controller="Cars" asp-action="Index" asp-route-brandId="@Model?.BrandId"
+                       class="btn btn-warning">
+                        <i class="fas fa-car"></i> Xem danh sách xe
+                    </a>
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="card border-success">
+                <div class="card-header bg-success text-white">
+                    <h6 class="mb-0"><i class="fas fa-check-circle"></i> Có thể xóa</h6>
+                </div>
+                <div class="card-body">
+                    <p>Thương hiệu này chưa có xe nào sử dụng, bạn có thể xóa một cách an toàn.</p>
+                </div>
+            </div>
+        }
+
+        <div class="card mt-3">
+            <div class="card-header">
+                <h6 class="mb-0">Lưu ý quan trọng</h6>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-info">
+                    <small>
+                        <i class="fas fa-info-circle"></i>
+                        Sau khi xóa, tất cả dữ liệu liên quan đến thương hiệu này sẽ bị mất vĩnh viễn.
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,197 @@
+﻿@model IEnumerable<carrentalmvc.Models.Review>
+@{
+    var carId = ViewBag.CarId as int? ?? 0;
+    var carName = ViewBag.CarName as string ?? "N/A";
+    var averageRating = ViewBag.AverageRating != null ? (double)ViewBag.AverageRating : 0.0;
+    var totalReviews = ViewBag.TotalReviews != null ? (int)ViewBag.TotalReviews : 0;
+    var recommendationPercentage = ViewBag.RecommendationPercentage != null ? (double)ViewBag.RecommendationPercentage : 0.0;
+    var fiveStarCount = ViewBag.FiveStarCount != null ? (int)ViewBag.FiveStarCount : 0;
+    var fourStarCount = ViewBag.FourStarCount != null ? (int)ViewBag.FourStarCount : 0;
+    var threeStarCount = ViewBag.ThreeStarCount != null ? (int)ViewBag.ThreeStarCount : 0;
+    var twoStarCount = ViewBag.TwoStarCount != null ? (int)ViewBag.TwoStarCount : 0;
+    var oneStarCount = ViewBag.OneStarCount != null ? (int)ViewBag.OneStarCount : 0;
+
+    var recentReviews = Model?.ToList() ?? new List<carrentalmvc.Models.Review>();
+    ViewData["Title"] = $"Tóm tắt đánh giá xe - {carName}";
+}
+
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2"><i class="fas fa-star"></i> Tóm tắt đánh giá xe</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <div class="btn-group">
+            <a asp-action="Index" asp-route-carId="@carId" class="btn btn-sm btn-outline-primary">
+                <i class="fas fa-list"></i> Xem tất cả đánh giá
+            </a>
+            <a asp-action="Index" class="btn btn-sm btn-outline-secondary">
+                <i class="fas fa-arrow-left"></i> Quay lại
+            </a>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Summary Stats -->
+    <div class="col-md-4">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h6 class="mb-0">Tổng quan đánh giá</h6>
+            </div>
+            <div class="card-body text-center">
+                <h2 class="display-4 text-primary">@averageRating.ToString("F1")</h2>
+                <div class="text-warning mb-2">
+                    @for (int i = 1; i <= 5; i++)
+                    {
+                        <i class="fas fa-star@(i <= Math.Round(averageRating) ? "" : " text-muted") fa-lg"></i>
+                    }
+                </div>
+                <p class="text-muted">@totalReviews đánh giá</p>
+
+                @if (recommendationPercentage > 0)
+                {
+                    <div class="mt-3">
+                        <span class="badge bg-success fs-6">
+                            @recommendationPercentage.ToString("F1")% khuyến nghị
+                        </span>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <!-- Rating Breakdown -->
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0">Phân tích đánh giá</h6>
+            </div>
+            <div class="card-body">
+                @{
+                    var ratingCounts = new[] { fiveStarCount, fourStarCount, threeStarCount, twoStarCount, oneStarCount };
+                    var maxCount = ratingCounts.Any() ? ratingCounts.Max() : 0;
+                }
+
+                @for (int star = 5; star >= 1; star--)
+                {
+                    var count = star switch
+                    {
+                        5 => fiveStarCount,
+                        4 => fourStarCount,
+                        3 => threeStarCount,
+                        2 => twoStarCount,
+                        1 => oneStarCount,
+                        _ => 0
+                    };
+                    var percentage = totalReviews > 0 ? (double)count / totalReviews * 100 : 0;
+
+                    <div class="d-flex align-items-center mb-2">
+                        <div class="me-2" style="width: 60px;">
+                            @star <i class="fas fa-star text-warning"></i>
+                        </div>
+                        <div class="progress flex-grow-1 me-2" style="height: 8px;">
+                            <div class="progress-bar bg-@(star >= 4 ? "success" : star >= 3 ? "warning" : "danger")"
+                                 style="width:@($"{percentage:F0}%")"></div>
+                        </div>
+                        <small class="text-muted" style="width: 40px;">@count</small>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+
+    <!-- Car Info & Recent Reviews -->
+    <div class="col-md-8">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h6 class="mb-0">Thông tin xe</h6>
+            </div>
+            <div class="card-body">
+                <h5 class="text-primary">@carName</h5>
+                <div class="row">
+                    <div class="col-md-3">
+                        <strong>Tổng đánh giá:</strong><br>
+                        <span class="h4 text-info">@totalReviews</span>
+                    </div>
+                    <div class="col-md-3">
+                        <strong>Điểm trung bình:</strong><br>
+                        <span class="h4 text-warning">@averageRating.ToString("F1")/5</span>
+                    </div>
+                    <div class="col-md-3">
+                        <strong>Khuyến nghị:</strong><br>
+                        <span class="h4 text-success">@recommendationPercentage.ToString("F1")%</span>
+                    </div>
+                    <div class="col-md-3">
+                        <strong>5 sao:</strong><br>
+                        <span class="h4 text-primary">@fiveStarCount</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Reviews -->
+        <div class="card">
+            <div class="card-header">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0">Đánh giá gần nhất</h6>
+                    <a asp-action="Index" asp-route-carId="@carId" class="btn btn-sm btn-outline-primary">Xem tất cả</a>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                @if (recentReviews.Any())
+                {
+                    @foreach (var review in recentReviews)
+                    {
+                        var userAvatar = review.User?.Avatar;
+                        var userName = review.User?.FullName ?? "N/A";
+                        <div class="border-bottom p-3">
+                            <div class="d-flex align-items-start">
+                                @if (!string.IsNullOrEmpty(userAvatar))
+                                {
+                                    <img src="@userAvatar" alt="Avatar" class="rounded-circle me-3" width="40" height="40">
+                                }
+                                else
+                                {
+                                    <div class="bg-primary rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 40px; height: 40px;">
+                                        <i class="fas fa-user text-white"></i>
+                                    </div>
+                                }
+                                <div class="flex-grow-1">
+                                    <div class="d-flex align-items-center mb-1">
+                                        <strong class="me-2">@userName</strong>
+                                        <div class="text-warning me-2">
+                                            @for (int i = 1; i <= 5; i++)
+                                            {
+                                                <i class="fas fa-star@(i <= review.Rating ? "" : " text-muted") fa-sm"></i>
+                                            }
+                                        </div>
+                                        <span class="badge bg-@(review.Rating >= 4 ? "success" : review.Rating >= 3 ? "warning" : "danger")">
+                                            @review.Rating
+                                        </span>
+                                        @if (review.IsRecommended)
+                                        {
+                                            <span class="badge bg-info ms-1">Khuyến nghị</span>
+                                        }
+                                    </div>
+                                    @if (!string.IsNullOrEmpty(review.Comment))
+                                    {
+                                        <p class="mb-1 small">"@review.Comment"</p>
+                                    }
+                                    <small class="text-muted">@review.CreatedAt.ToString("dd/MM/yyyy")</small>
+                                </div>
+                                <div>
+                                    <a asp-action="Details" asp-route-id="@review.ReviewId" class="btn btn-sm btn-outline-primary">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                }
+                else
+                {
+                    <div class="text-center py-4">
+                        <i class="fas fa-star fa-2x text-muted mb-2"></i>
+                        <p class="text-muted mb-0">Chưa có đánh giá nào</p>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,356 @@
+﻿razor Areas\Admin\Views\Dashboard\Index.cshtml
+@{
+    ViewData["Title"] = "Dashboard";
+
+    // Lấy dữ liệu từ ViewBag
+    var totalCars = ViewBag.TotalCars ?? 0;
+    var activeCars = ViewBag.ActiveCars ?? 0;
+    var totalRentals = ViewBag.TotalRentals ?? 0;
+    var monthlyRevenue = ViewBag.MonthlyRevenue ?? 0m;
+    var monthlyRevenueChart = ViewBag.MonthlyRevenueChart as List<object> ?? new List<object>();
+    var carStatusChart = ViewBag.CarStatusChart as List<object> ?? new List<object>();
+    var recentRentals = ViewBag.RecentRentals as List<carrentalmvc.Models.Rental> ?? new List<carrentalmvc.Models.Rental>();
+    var recentCars = ViewBag.RecentCars as List<carrentalmvc.Models.Car> ?? new List<carrentalmvc.Models.Car>();
+
+    var getRentalStatusText = ViewBag.GetRentalStatusText as Func<carrentalmvc.Models.Enums.RentalStatus, string>;
+    var getCarStatusText = ViewBag.GetCarStatusText as Func<carrentalmvc.Models.Enums.CarStatus, string>;
+}
+
+<div class="dashboard">
+    <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+        <h1 class="h2"><i class="fas fa-tachometer-alt"></i> Dashboard</h1>
+        <div class="btn-toolbar mb-2 mb-md-0">
+            <div class="btn-group me-2">
+                <button type="button" class="btn btn-sm btn-outline-secondary">
+                    <i class="fas fa-download"></i> Xuất báo cáo
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="row">
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-primary shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                                Tổng số xe
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">@totalCars</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-car fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-success shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                                Xe hoạt động
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">@activeCars</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-check-circle fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-info shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                                Tổng hợp đồng
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">@totalRentals</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-file-contract fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-warning shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                                Doanh thu tháng
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                @monthlyRevenue.ToString("N0") VNĐ
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-dollar-sign fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts Row -->
+    <div class="row">
+        <!-- Revenue Chart -->
+        <div class="col-xl-8 col-lg-7">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                    <h6 class="m-0 font-weight-bold text-primary">Biểu đồ doanh thu 12 tháng gần nhất</h6>
+                </div>
+                <div class="card-body">
+                    <div class="chart-area">
+                        <canvas id="revenueChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Car Status Chart -->
+        <div class="col-xl-4 col-lg-5">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                    <h6 class="m-0 font-weight-bold text-primary">Trạng thái xe</h6>
+                </div>
+                <div class="card-body">
+                    <div class="chart-pie pt-4 pb-2">
+                        <canvas id="carStatusChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Activities -->
+    <div class="row">
+        <!-- Recent Rentals -->
+        <div class="col-lg-6 mb-4">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Hợp đồng thuê mới nhất</h6>
+                </div>
+                <div class="card-body">
+                    @if (recentRentals.Any())
+                    {
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Mã</th>
+                                        <th>Xe</th>
+                                        <th>Khách hàng</th>
+                                        <th>Trạng thái</th>
+                                        <th>Ngày tạo</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var rental in recentRentals)
+                                    {
+                                        <tr>
+                                            <td>
+                                                <a asp-area="Admin" asp-controller="Rentals" asp-action="Details" asp-route-id="@rental.RentalId">
+                                                    #@rental.RentalId
+                                                </a>
+                                            </td>
+                                            <td class="text-truncate" style="max-width: 150px;">
+                                                @rental.Car?.Name
+                                                <small class="text-muted d-block">@rental.Car?.Brand?.Name</small>
+                                            </td>
+                                            <td>@rental.Renter?.FullName</td>
+                                            <td>
+                                                <span class="badge badge-@(GetStatusBadgeClass(rental.Status))">
+                                                    @(getRentalStatusText?.Invoke(rental.Status) ?? "N/A")
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <small>@rental.CreatedAt.ToString("dd/MM/yyyy")</small>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="text-center">
+                            <a asp-area="Admin" asp-controller="Rentals" asp-action="Index" class="btn btn-sm btn-primary">
+                                Xem tất cả
+                            </a>
+                        </div>
+                    }
+                    else
+                    {
+                        <p class="text-muted text-center">Chưa có hợp đồng thuê nào</p>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Cars -->
+        <div class="col-lg-6 mb-4">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Xe được thêm mới nhất</h6>
+                </div>
+                <div class="card-body">
+                    @if (recentCars.Any())
+                    {
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Xe</th>
+                                        <th>Chủ xe</th>
+                                        <th>Giá/ngày</th>
+                                        <th>Trạng thái</th>
+                                        <th>Ngày thêm</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var car in recentCars)
+                                    {
+                                        <tr>
+                                            <td class="text-truncate" style="max-width: 150px;">
+                                                <a asp-area="Admin" asp-controller="Cars" asp-action="Details" asp-route-id="@car.CarId">
+                                                    @car.Name
+                                                </a>
+                                                <small class="text-muted d-block">@car.Brand?.Name - @car.Category?.Name</small>
+                                            </td>
+                                            <td>@car.Owner?.FullName</td>
+                                            <td>@car.PricePerDay.ToString("N0") VNĐ</td>
+                                            <td>
+                                                <span class="badge badge-@(GetCarStatusBadgeClass(car.Status))">
+                                                    @(getCarStatusText?.Invoke(car.Status) ?? "N/A")
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <small>@car.CreatedAt.ToString("dd/MM/yyyy")</small>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="text-center">
+                            <a asp-area="Admin" asp-controller="Cars" asp-action="Index" class="btn btn-sm btn-primary">
+                                Xem tất cả
+                            </a>
+                        </div>
+                    }
+                    else
+                    {
+                        <p class="text-muted text-center">Chưa có xe nào</p>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // Revenue Chart
+        const revenueData = @Html.Raw(Json.Serialize(monthlyRevenueChart));
+        const revenueCtx = document.getElementById('revenueChart').getContext('2d');
+        new Chart(revenueCtx, {
+            type: 'line',
+            data: {
+                labels: revenueData.map(x => x.month),
+                datasets: [{
+                    label: 'Doanh thu (VNĐ)',
+                    data: revenueData.map(x => x.revenue),
+                    borderColor: 'rgb(75, 192, 192)',
+                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                    tension: 0.1
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        position: 'top',
+                    },
+                    title: {
+                        display: true,
+                        text: 'Doanh thu theo tháng'
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: function(value) {
+                                return new Intl.NumberFormat('vi-VN').format(value) + ' VNĐ';
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
+        // Car Status Chart
+        const carStatusData = @Html.Raw(Json.Serialize(carStatusChart));
+        const carStatusCtx = document.getElementById('carStatusChart').getContext('2d');
+        new Chart(carStatusCtx, {
+            type: 'doughnut',
+            data: {
+                labels: carStatusData.map(x => x.status),
+                datasets: [{
+                    data: carStatusData.map(x => x.count),
+                    backgroundColor: carStatusData.map(x => x.color),
+                    hoverBackgroundColor: carStatusData.map(x => x.color),
+                    hoverBorderColor: "rgba(234, 236, 244, 1)",
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                    }
+                }
+            }
+        });
+    </script>
+}
+
+@functions {
+    private string GetStatusBadgeClass(carrentalmvc.Models.Enums.RentalStatus status)
+    {
+        return status switch
+        {
+            carrentalmvc.Models.Enums.RentalStatus.Pending => "warning",
+            carrentalmvc.Models.Enums.RentalStatus.Confirmed => "info",
+            carrentalmvc.Models.Enums.RentalStatus.Active => "success",
+            carrentalmvc.Models.Enums.RentalStatus.Completed => "primary",
+            carrentalmvc.Models.Enums.RentalStatus.Cancelled => "danger",
+            carrentalmvc.Models.Enums.RentalStatus.Overdue => "danger",
+            _ => "secondary"
+        };
+    }
+
+    private string GetCarStatusBadgeClass(carrentalmvc.Models.Enums.CarStatus status)
+    {
+        return status switch
+        {
+            carrentalmvc.Models.Enums.CarStatus.Available => "success",
+            carrentalmvc.Models.Enums.CarStatus.Rented => "warning",
+            carrentalmvc.Models.Enums.CarStatus.Maintenance => "danger",
+            carrentalmvc.Models.Enums.CarStatus.PendingApproval => "secondary",
+            _ => "secondary"
+        };
+    }
+}

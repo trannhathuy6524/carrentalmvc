@@ -1,0 +1,141 @@
+﻿@using carrentalmvc.Models
+@model Brand
+
+@{
+    ViewData["Title"] = $"Chi tiết thương hiệu - {Model?.Name}";
+    int carCount = ViewBag.CarCount != null ? (int)ViewBag.CarCount : (Model?.Cars?.Count ?? 0);
+}
+
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2"><i class="fas fa-tags"></i> Chi tiết thương hiệu</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <div class="btn-group me-2">
+            <a asp-action="Edit" asp-route-id="@Model?.BrandId" class="btn btn-sm btn-warning">
+                <i class="fas fa-edit"></i> Chỉnh sửa
+            </a>
+            <a asp-action="Delete" asp-route-id="@Model?.BrandId" class="btn btn-sm btn-danger">
+                <i class="fas fa-trash"></i> Xóa
+            </a>
+        </div>
+        <div class="btn-group">
+            <a asp-action="Index" class="btn btn-sm btn-outline-secondary">
+                <i class="fas fa-arrow-left"></i> Quay lại
+            </a>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h6 class="mb-0">Thông tin chi tiết</h6>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3">
+                        @if (!string.IsNullOrEmpty(Model?.LogoUrl))
+                        {
+                            <img src="@Model.LogoUrl" alt="@Model.Name" class="img-fluid rounded" style="max-height: 150px;">
+                        }
+                        else
+                        {
+                            <div class="bg-light rounded d-flex align-items-center justify-content-center" style="height: 150px;">
+                                <i class="fas fa-image fa-3x text-muted"></i>
+                            </div>
+                        }
+                    </div>
+                    <div class="col-md-9">
+                        <dl class="row">
+                            <dt class="col-sm-3">ID:</dt>
+                            <dd class="col-sm-9">#@Model?.BrandId</dd>
+
+                            <dt class="col-sm-3">Tên thương hiệu:</dt>
+                            <dd class="col-sm-9">
+                                <h5 class="text-primary">@Model?.Name</h5>
+                            </dd>
+
+                            <dt class="col-sm-3">Mô tả:</dt>
+                            <dd class="col-sm-9">
+                                @if (!string.IsNullOrEmpty(Model?.Description))
+                                {
+                                    <p>@Model.Description</p>
+                                }
+                                else
+                                {
+                                    <em class="text-muted">Chưa có mô tả</em>
+                                }
+                            </dd>
+
+                            <dt class="col-sm-3">Số lượng xe:</dt>
+                            <dd class="col-sm-9">
+                                @if (carCount > 0)
+                                {
+                                    <span class="badge bg-success fs-6">@carCount xe</span>
+                                    <a asp-area="Admin" asp-controller="Cars" asp-action="Index" asp-route-brandId="@Model?.BrandId"
+                                       class="btn btn-sm btn-outline-primary ms-2">
+                                        <i class="fas fa-eye"></i> Xem danh sách xe
+                                    </a>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-secondary fs-6">Chưa có xe nào</span>
+                                }
+                            </dd>
+
+                            <dt class="col-sm-3">Ngày tạo:</dt>
+                            <dd class="col-sm-9">@Model?.CreatedAt.ToString("dd/MM/yyyy HH:mm")</dd>
+
+                            <dt class="col-sm-3">Cập nhật lần cuối:</dt>
+                            <dd class="col-sm-9">@Model?.UpdatedAt.ToString("dd/MM/yyyy HH:mm")</dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h6 class="mb-0">Thao tác nhanh</h6>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a asp-action="Edit" asp-route-id="@Model?.BrandId" class="btn btn-outline-warning">
+                        <i class="fas fa-edit"></i> Chỉnh sửa thông tin
+                    </a>
+
+                    @if (carCount > 0)
+                    {
+                        <a asp-area="Admin" asp-controller="Cars" asp-action="Index" asp-route-brandId="@Model?.BrandId"
+                           class="btn btn-outline-primary">
+                            <i class="fas fa-car"></i> Xem xe thuộc thương hiệu này
+                        </a>
+                    }
+
+                    <hr>
+
+                    <a asp-action="Delete" asp-route-id="@Model?.BrandId" class="btn btn-outline-danger">
+                        <i class="fas fa-trash"></i> Xóa thương hiệu
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        @if (carCount > 0)
+        {
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0">Thống kê</h6>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i>
+                        Thương hiệu này hiện có <strong>@carCount</strong> xe trong hệ thống.
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+</div>

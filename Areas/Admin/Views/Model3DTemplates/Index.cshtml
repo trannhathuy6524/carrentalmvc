@@ -1,0 +1,222 @@
+﻿@using carrentalmvc.Models.Enums
+@model IEnumerable<carrentalmvc.Models.Model3DTemplate>
+@{
+    ViewData["Title"] = "Quản lý mô hình 3D";
+
+    var searchTerm = ViewBag.SearchTerm as string;
+    var brandId = ViewBag.BrandId as int?;
+    var categoryId = ViewBag.CategoryId as int?;
+    var fileFormat = ViewBag.FileFormat as FileFormat?;
+    var pageNumber = ViewBag.PageNumber != null ? (int)ViewBag.PageNumber : 1;
+    var totalPages = ViewBag.TotalPages != null ? (int)ViewBag.TotalPages : 1;
+    var totalCount = ViewBag.TotalCount != null ? (int)ViewBag.TotalCount : Model.Count();
+
+    var getFileFormatText = ViewBag.GetFileFormatText as Func<FileFormat, string>;
+    var getFileSizeText = ViewBag.GetFileSizeText as Func<long?, string>;
+}
+
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2"><i class="fas fa-cube"></i> Quản lý mô hình 3D</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <div class="btn-group">
+            <a asp-action="Create" class="btn btn-sm btn-primary">
+                <i class="fas fa-plus"></i> Thêm mô hình 3D
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Filters -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="get" asp-action="Index">
+            <div class="row">
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label for="searchTerm">Tìm kiếm</label>
+                        <input name="searchTerm" value="@searchTerm" class="form-control" placeholder="Tên mô hình, mô tả..." />
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="form-group">
+                        <label for="brandId">Thương hiệu</label>
+                        <select name="brandId" asp-items="ViewBag.Brands" class="form-select">
+                            <option value="">Tất cả thương hiệu</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="form-group">
+                        <label for="categoryId">Loại xe</label>
+                        <select name="categoryId" asp-items="ViewBag.Categories" class="form-select">
+                            <option value="">Tất cả loại xe</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="form-group">
+                        <label for="fileFormat">Định dạng</label>
+                        <select name="fileFormat" class="form-select">
+                            <option value="">Tất cả định dạng</option>
+                            <option value="@FileFormat.GLB" selected="@(fileFormat == FileFormat.GLB)">GLB</option>
+                            <option value="@FileFormat.GLTF" selected="@(fileFormat == FileFormat.GLTF)">GLTF</option>
+                            <option value="@FileFormat.OBJ" selected="@(fileFormat == FileFormat.OBJ)">OBJ</option>
+                            <option value="@FileFormat.FBX" selected="@(fileFormat == FileFormat.FBX)">FBX</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label>&nbsp;</label>
+                        <div class="d-flex">
+                            <button type="submit" class="btn btn-primary me-2">
+                                <i class="fas fa-search"></i> Tìm kiếm
+                            </button>
+                            <a asp-action="Index" class="btn btn-outline-secondary">
+                                <i class="fas fa-undo"></i> Xóa bộ lọc
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Templates Table -->
+<div class="card">
+    <div class="card-body">
+        @if (Model.Any())
+        {
+            <div class="table-responsive">
+                <table class="table table-striped table-hover">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>Hình ảnh</th>
+                            <th>Tên mô hình</th>
+                            <th>Thương hiệu</th>
+                            <th>Loại xe</th>
+                            <th>Định dạng</th>
+                            <th>Kích thước</th>
+                            <th>Trạng thái</th>
+                            <th>Sử dụng</th>
+                            <th>Ngày tạo</th>
+                            <th>Thao tác</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var template in Model)
+                        {
+                            var usageCount = template.CarModels3D?.Count ?? 0;
+                            <tr>
+                                <td>
+                                    @if (!string.IsNullOrEmpty(template.PreviewImageUrl))
+                                    {
+                                        <img src="@template.PreviewImageUrl" alt="@template.Name" class="img-thumbnail" style="width: 60px; height: 45px; object-fit: cover;">
+                                    }
+                                    else
+                                    {
+                                        <div class="bg-light d-flex align-items-center justify-content-center" style="width: 60px; height: 45px;">
+                                            <i class="fas fa-cube text-muted"></i>
+                                        </div>
+                                    }
+                                </td>
+                                <td>
+                                    <div>
+                                        <strong>@template.Name</strong>
+                                        @if (!string.IsNullOrEmpty(template.Description))
+                                        {
+                                            <br>
+                                            <small class="text-muted">@template.Description</small>
+                                        }
+                                    </div>
+                                </td>
+                                <td>@(template.Brand?.Name ?? "Chung")</td>
+                                <td>@(template.Category?.Name ?? "Chung")</td>
+                                <td>
+                                    <span class="badge bg-info">@(getFileFormatText?.Invoke(template.FileFormat) ?? template.FileFormat.ToString())</span>
+                                </td>
+                                <td>@(getFileSizeText?.Invoke(template.FileSize) ?? "N/A")</td>
+                                <td>
+                                    @if (template.IsActive)
+                                    {
+                                        <span class="badge bg-success">Hoạt động</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-secondary">Tạm dừng</span>
+                                    }
+                                </td>
+                                <td>
+                                    <span class="badge bg-primary">@usageCount xe</span>
+                                </td>
+                                <td>@template.CreatedAt.ToString("dd/MM/yyyy")</td>
+                                <td>
+                                    <div class="btn-group" role="group">
+                                        <a asp-action="Details" asp-route-id="@template.TemplateId" class="btn btn-sm btn-outline-info" title="Xem chi tiết">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                        <a asp-action="Edit" asp-route-id="@template.TemplateId" class="btn btn-sm btn-outline-warning" title="Chỉnh sửa">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                        <form asp-action="ToggleActive" asp-route-id="@template.TemplateId" method="post" class="d-inline">
+                                            @Html.AntiForgeryToken()
+                                            <button type="submit" class="btn btn-sm btn-outline-@(template.IsActive ? "secondary" : "success")"
+                                                    title="@(template.IsActive ? "Tạm dừng" : "Kích hoạt")"
+                                                    onclick="return confirm('@(template.IsActive ? "Bạn có chắc muốn tạm dừng mô hình này?" : "Bạn có chắc muốn kích hoạt mô hình này?")')">
+                                                <i class="fas fa-@(template.IsActive ? "pause" : "play")"></i>
+                                            </button>
+                                        </form>
+                                        <a asp-action="Delete" asp-route-id="@template.TemplateId" class="btn btn-sm btn-outline-danger" title="Xóa">
+                                            <i class="fas fa-trash"></i>
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Pagination -->
+            @if (totalPages > 1)
+            {
+                <nav aria-label="Page navigation">
+                    <ul class="pagination justify-content-center">
+                        @if (pageNumber > 1)
+                        {
+                            <li class="page-item">
+                                <a class="page-link" asp-action="Index" asp-route-page="@(pageNumber - 1)" asp-route-searchTerm="@searchTerm" asp-route-brandId="@brandId" asp-route-categoryId="@categoryId" asp-route-fileFormat="@fileFormat">Trước</a>
+                            </li>
+                        }
+
+                        @for (int i = Math.Max(1, pageNumber - 2); i <= Math.Min(totalPages, pageNumber + 2); i++)
+                        {
+                            <li class="page-item @(i == pageNumber ? "active" : "")">
+                                <a class="page-link" asp-action="Index" asp-route-page="@i" asp-route-searchTerm="@searchTerm" asp-route-brandId="@brandId" asp-route-categoryId="@categoryId" asp-route-fileFormat="@fileFormat">@i</a>
+                            </li>
+                        }
+
+                        @if (pageNumber < totalPages)
+                        {
+                            <li class="page-item">
+                                <a class="page-link" asp-action="Index" asp-route-page="@(pageNumber + 1)" asp-route-searchTerm="@searchTerm" asp-route-brandId="@brandId" asp-route-categoryId="@categoryId" asp-route-fileFormat="@fileFormat">Sau</a>
+                            </li>
+                        }
+                    </ul>
+                </nav>
+            }
+        }
+        else
+        {
+            <div class="text-center py-5">
+                <i class="fas fa-cube fa-3x text-muted mb-3"></i>
+                <h5 class="text-muted">Chưa có mô hình 3D nào</h5>
+                <p class="text-muted">Hãy thêm mô hình 3D đầu tiên để chủ xe có thể sử dụng khi thêm xe.</p>
+                <a asp-action="Create" class="btn btn-primary">
+                    <i class="fas fa-plus me-2"></i>Thêm mô hình 3D đầu tiên
+                </a>
+            </div>
+        }
+    </div>
+</div>

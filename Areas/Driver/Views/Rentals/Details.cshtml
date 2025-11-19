@@ -1,0 +1,604 @@
+@model Rental
+@using carrentalmvc.Models
+@using carrentalmvc.Models.Enums
+@{
+    ViewData["Title"] = $"Chi tiết đơn thuê #{Model.RentalId}";
+    Layout = "~/Areas/Driver/Views/Shared/_DriverLayout.cshtml";
+
+    var isAvailable = ViewBag.IsAvailable ?? false;
+    var canClaim = ViewBag.CanClaim ?? false;
+    var canAccept = ViewBag.CanAccept ?? false;
+    var canReject = ViewBag.CanReject ?? false;
+    var isActive = ViewBag.IsActive ?? false;
+}
+
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+        <h1 class="h2">
+            <i class="fas fa-file-contract"></i> Chi tiết đơn thuê #@Model.RentalId
+        </h1>
+        <div class="btn-toolbar mb-2 mb-md-0">
+            <div class="btn-group me-2">
+                @* ✅ THÊM: Nút nhận đơn cho available rentals *@
+                @if (canClaim && isAvailable)
+                {
+                    <form asp-action="Claim" asp-route-id="@Model.RentalId" method="post" class="d-inline">
+                        @Html.AntiForgeryToken()
+                        <button type="submit" class="btn btn-sm btn-success" 
+                                onclick="return confirm('Bạn có chắc muốn nhận đơn này?')">
+                            <i class="fas fa-hand-paper"></i> Nhận đơn
+                        </form>
+                }
+                @if (canAccept)
+                {
+                    <form asp-action="Accept" asp-route-id="@Model.RentalId" method="post" class="d-inline">
+                        @Html.AntiForgeryToken()
+                        <button type="submit" class="btn btn-sm btn-success" 
+                                onclick="return confirm('Bạn có chắc muốn chấp nhận đơn thuê này?')">
+                            <i class="fas fa-check"></i> Chấp nhận đơn
+                        </button>
+                    </form>
+                }
+                @if (canReject)
+                {
+                    <button type="button" class="btn btn-sm btn-danger" onclick="showRejectModal()">
+                        <i class="fas fa-times"></i> Từ chối đơn
+                    </button>
+                }
+            </div>
+            <div class="btn-group">
+                <a asp-action="Index" class="btn btn-sm btn-outline-secondary">
+                    <i class="fas fa-arrow-left"></i> Quay lại
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Main Content -->
+        <div class="col-md-8">
+            <!-- ✅ THÊM: Alert cho available rentals -->
+            @if (isAvailable)
+            {
+                <div class="alert alert-danger border-danger">
+                    <h5 class="alert-heading">
+                        <i class="fas fa-bell"></i> Đơn có thể nhận!
+                    </h5>
+                    <p class="mb-0">
+                        Đây là đơn thuê mới chưa có tài xế. Bạn có thể nhận đơn này (first-come-first-served).
+                        Sau khi nhận, đơn sẽ được gán cho bạn và không có tài xế khác có thể nhận nữa.
+                    </p>
+                </div>
+            }
+            else if (!Model.DriverAccepted.HasValue)
+            {
+                <!-- ✅ Đơn đã gán nhưng chưa accept/reject -->
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <strong>Yêu cầu xác nhận:</strong> Đơn thuê này đang chờ bạn xác nhận. 
+                    Vui lòng kiểm tra thông tin và chấp nhận hoặc từ chối đơn thuê.
+                </div>
+            }
+            else if (Model.DriverAccepted == true)
+            {
+                <div class="alert alert-success">
+                    <i class="fas fa-check-circle"></i>
+                    <strong>Đã chấp nhận:</strong> Bạn đã chấp nhận đơn thuê này.
+                </div>
+            }
+            else if (Model.DriverAccepted == false)
+            {
+                <div class="alert alert-danger">
+                    <i class="fas fa-times-circle"></i>
+                    <strong>Đã từ chối:</strong> Bạn đã từ chối đơn thuê này.
+                </div>
+            }
+
+            <!-- Rental Information -->
+            <div class="card shadow mb-4">
+                <div class="card-header py-3 d-flex justify-content-between align-items-center">
+                    <h6 class="m-0 font-weight-bold text-primary">
+                        Thông tin đơn thuê
+                    </h6>
+                    <span class="badge bg-@(GetStatusBadgeClass(Model.Status))">
+                        @GetStatusText(Model.Status)
+                    </span>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <dl class="row">
+                                <dt class="col-sm-5">Mã đơn:</dt>
+                                <dd class="col-sm-7"><strong>#@Model.RentalId</strong></dd>
+
+                                <dt class="col-sm-5">Ngày bắt đầu:</dt>
+                                <dd class="col-sm-7">@Model.StartDate.ToString("dd/MM/yyyy HH:mm")</dd>
+
+                                <dt class="col-sm-5">Ngày kết thúc:</dt>
+                                <dd class="col-sm-7">@Model.EndDate.ToString("dd/MM/yyyy HH:mm")</dd>
+
+                                <dt class="col-sm-5">Số ngày thuê:</dt>
+                                <dd class="col-sm-7">
+                                    <span class="badge bg-info">@((Model.EndDate - Model.StartDate).Days) ngày</span>
+                                </dd>
+
+                                @if (Model.PickupDate.HasValue)
+                                {
+                                    <dt class="col-sm-5">Ngày nhận xe:</dt>
+                                    <dd class="col-sm-7">@Model.PickupDate.Value.ToString("dd/MM/yyyy HH:mm")</dd>
+                                }
+
+                                @if (Model.ReturnDate.HasValue)
+                                {
+                                    <dt class="col-sm-5">Ngày trả xe:</dt>
+                                    <dd class="col-sm-7">@Model.ReturnDate.Value.ToString("dd/MM/yyyy HH:mm")</dd>
+                                }
+                            </dl>
+                        </div>
+                        <div class="col-md-6">
+                            <dl class="row">
+                                <dt class="col-sm-5">Tổng giá trị:</dt>
+                                <dd class="col-sm-7">
+                                    <strong class="text-success">@Model.TotalPrice.ToString("N0") VNĐ</strong>
+                                </dd>
+
+                                @* ✅ FIX: Hiển thị driver fee thực tế thay vì 30% *@
+                                @if (Model.RequiresDriver)
+                                {
+                                    var duration = Model.EndDate - Model.StartDate;
+                                    var totalDays = Math.Max(1, (int)Math.Ceiling(duration.TotalDays));
+                                    var totalHours = (decimal)Math.Ceiling(duration.TotalHours);
+                                    var isHourly = totalHours < 24 && totalHours >= 4;
+                                    
+                                    decimal actualDriverFee = 0m;
+                                    if (Model.ActualDriverFee.HasValue)
+                                    {
+                                        // Use actual fee from DriverAssignment
+                                        actualDriverFee = isHourly 
+                                            ? totalHours * (Model.ActualDriverFee.Value / 8)
+                                            : totalDays * Model.ActualDriverFee.Value;
+                                    }
+                                    else
+                                    {
+                                        // Fallback to fixed 500k
+                                        actualDriverFee = isHourly 
+                                            ? totalHours * 62500m
+                                            : totalDays * 500000m;
+                                    }
+                                    
+                                    <dt class="col-sm-5">Phí tài xế:</dt>
+                                    <dd class="col-sm-7">
+                                        <strong class="text-primary">@actualDriverFee.ToString("N0") VNĐ</strong>
+                                        <br/>
+                                        <small class="text-muted">
+                                            (@(isHourly ? $"{totalHours:F0} giờ × 62,500 VNĐ" : $"{totalDays} ngày × 500,000 VNĐ"))
+                                        </small>
+                                    </dd>
+                                }
+
+                                @if (Model.Deposit.HasValue && Model.Deposit > 0)
+                                {
+                                    <dt class="col-sm-5">Tiền đặt cọc:</dt>
+                                    <dd class="col-sm-7">@Model.Deposit.Value.ToString("N0") VNĐ</dd>
+                                }
+
+                                <dt class="col-sm-5">Ngày tạo:</dt>
+                                <dd class="col-sm-7">@Model.CreatedAt.ToString("dd/MM/yyyy HH:mm")</dd>
+
+                                <dt class="col-sm-5">Gán lúc:</dt>
+                                <dd class="col-sm-7">
+                                    @if (Model.DriverAssignedAt.HasValue)
+                                    {
+                                        @Model.DriverAssignedAt.Value.ToString("dd/MM/yyyy HH:mm")
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">N/A</span>
+                                    }
+                                </dd>
+                            </dl>
+                        </div>
+                    </div>
+
+                    @if (!string.IsNullOrEmpty(Model.Notes))
+                    {
+                        <div class="mt-3">
+                            <h6>Ghi chú:</h6>
+                            <div class="alert alert-info">
+                                @Model.Notes
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+
+            <!-- Customer Information -->
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">
+                        <i class="fas fa-user"></i> Thông tin khách hàng
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <dl class="row">
+                        <dt class="col-sm-3">Họ tên:</dt>
+                        <dd class="col-sm-9">@Model.Renter?.FullName</dd>
+
+                        @if (!string.IsNullOrEmpty(Model.Renter?.Email))
+                        {
+                            <dt class="col-sm-3">Email:</dt>
+                            <dd class="col-sm-9">
+                                <a href="mailto:@Model.Renter.Email">@Model.Renter.Email</a>
+                            </dd>
+                        }
+
+                        @if (!string.IsNullOrEmpty(Model.Renter?.PhoneNumber))
+                        {
+                            <dt class="col-sm-3">Số điện thoại:</dt>
+                            <dd class="col-sm-9">
+                                <a href="tel:@Model.Renter.PhoneNumber" class="btn btn-sm btn-success">
+                                    <i class="fas fa-phone"></i> @Model.Renter.PhoneNumber
+                                </a>
+                            </dd>
+                        }
+                    </dl>
+                </div>
+            </div>
+
+            <!-- Car Information -->
+            @if (Model.Car != null)
+            {
+                var primaryImage = Model.Car.CarImages?.FirstOrDefault(img => img.IsPrimary);
+
+                <div class="card shadow mb-4">
+                    <div class="card-header py-3">
+                        <h6 class="m-0 font-weight-bold text-primary">
+                            <i class="fas fa-car"></i> Thông tin xe
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-4">
+                                @if (primaryImage != null && !string.IsNullOrEmpty(primaryImage.ImageUrl))
+                                {
+                                    <img src="@primaryImage.ImageUrl" alt="@Model.Car.Name" class="img-fluid rounded">
+                                }
+                                else
+                                {
+                                    <div class="bg-light rounded d-flex align-items-center justify-content-center" style="height: 200px;">
+                                        <i class="fas fa-car fa-3x text-muted"></i>
+                                    </div>
+                                }
+                            </div>
+                            <div class="col-md-8">
+                                <h5>@Model.Car.Name</h5>
+                                <p class="text-muted">
+                                    @(Model.Car.Brand?.Name ?? "N/A") - @(Model.Car.Category?.Name ?? "N/A")
+                                </p>
+
+                                <dl class="row">
+                                    @if (!string.IsNullOrEmpty(Model.Car.LicensePlate))
+                                    {
+                                        <dt class="col-sm-4">Biển số:</dt>
+                                        <dd class="col-sm-8">
+                                            <span class="badge bg-dark">@Model.Car.LicensePlate</span>
+                                        </dd>
+                                    }
+
+                                    @if (!string.IsNullOrEmpty(Model.Car.Color))
+                                    {
+                                        <dt class="col-sm-4">Màu sắc:</dt>
+                                        <dd class="col-sm-8">@Model.Car.Color</dd>
+                                    }
+
+                                    @if (Model.Car.Year > 0)
+                                    {
+                                        <dt class="col-sm-4">Năm sản xuất:</dt>
+                                        <dd class="col-sm-8">@Model.Car.Year</dd>
+                                    }
+
+                                    @if (Model.Car.Seats.HasValue && Model.Car.Seats > 0)
+                                    {
+                                        <dt class="col-sm-4">Số chỗ:</dt>
+                                        <dd class="col-sm-8">@Model.Car.Seats chỗ</dd>
+                                    }
+                                </dl>
+
+                                <h6 class="mt-3">Thông tin chủ xe:</h6>
+                                <p class="mb-1">
+                                    <i class="fas fa-user"></i> @Model.Car.Owner?.FullName
+                                </p>
+                                @if (!string.IsNullOrEmpty(Model.Car.Owner?.PhoneNumber))
+                                {
+                                    <p class="mb-0">
+                                        <a href="tel:@Model.Car.Owner.PhoneNumber" class="btn btn-sm btn-primary">
+                                            <i class="fas fa-phone"></i> @Model.Car.Owner.PhoneNumber
+                                        </a>
+                                    </p>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+
+        <!-- Sidebar -->
+        <div class="col-md-4">
+            <!-- Quick Actions -->
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">
+                        Thao tác nhanh
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        @* ✅ THÊM: Nút nhận đơn cho available rentals *@
+                        @if (canClaim && isAvailable)
+                        {
+                            var duration = Model.EndDate - Model.StartDate;
+                            var totalDays = Math.Max(1, (int)Math.Ceiling(duration.TotalDays));
+                            var totalHours = (decimal)Math.Ceiling(duration.TotalHours);
+                            var isHourlyRental = totalHours < 24 && totalHours >= 4;
+                            
+                            // ✅ Calculate driver fee based on fixed 500k
+                            decimal estimatedDriverFee = isHourlyRental 
+                                ? totalHours * 62500m
+                                : totalDays * 500000m;
+                            
+                            <form asp-action="Claim" asp-route-id="@Model.RentalId" method="post">
+                                @Html.AntiForgeryToken()
+                                <button type="submit" class="btn btn-success w-100" 
+                                        onclick="return confirm('Bạn có chắc muốn nhận đơn này? Phí ước tính: @(estimatedDriverFee.ToString("N0")) VNĐ')">
+                                    <i class="fas fa-hand-paper"></i> Nhận đơn này
+                                </button>
+                            </form>
+                            
+                            <div class="alert alert-info mb-0">
+                                <small>
+                                    <i class="fas fa-info-circle"></i>
+                                    Phí tài xế ước tính: <strong>@estimatedDriverFee.ToString("N0") VNĐ</strong>
+                                    <br/>
+                                    <span class="text-muted">
+                                        (@(isHourlyRental ? $"{totalHours:F0} giờ × 62,500 VNĐ" : $"{totalDays} ngày × 500,000 VNĐ"))
+                                    </span>
+                                </small>
+                            </div>
+                        }
+                        
+                        @if (canAccept)
+                        {
+                            <form asp-action="Accept" asp-route-id="@Model.RentalId" method="post">
+                                @Html.AntiForgeryToken()
+                                <button type="submit" class="btn btn-success w-100" 
+                                        onclick="return confirm('Bạn có chắc muốn chấp nhận đơn thuê này?')">
+                                    <i class="fas fa-check"></i> Chấp nhận đơn thuê
+                                </button>
+                            </form>
+                        }
+
+                        @if (canReject)
+                        {
+                            <button type="button" class="btn btn-danger w-100" onclick="showRejectModal()">
+                                <i class="fas fa-times"></i> Từ chối đơn thuê
+                            </button>
+                        }
+
+                        @if (!canClaim && !canAccept && !canReject)
+                        {
+                            <div class="alert alert-info mb-0">
+                                <i class="fas fa-info-circle"></i>
+                                <small>
+                                    @if (Model.DriverAccepted == true)
+                                    {
+                                        <span>Bạn đã chấp nhận đơn thuê này.</span>
+                                    }
+                                    else if (Model.DriverAccepted == false)
+                                    {
+                                        <span>Bạn đã từ chối đơn thuê này.</span>
+                                    }
+                                    else
+                                    {
+                                        <span>Không có thao tác khả dụng.</span>
+                                    }
+                                </small>
+                            </div>
+                        }
+
+                        <hr class="my-2">
+
+                        <a asp-action="Index" class="btn btn-outline-secondary">
+                            <i class="fas fa-list"></i> Danh sách đơn thuê
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Status Timeline -->
+            <div class="card shadow">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">
+                        Trạng thái đơn thuê
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="timeline">
+                        <div class="timeline-item @(GetTimelineStatus(RentalStatus.Confirmed, Model.Status))">
+                            <div class="timeline-marker"></div>
+                            <div class="timeline-content">
+                                <h6>Đã xác nhận</h6>
+                                <small>Chủ xe đã xác nhận & gán tài xế</small>
+                            </div>
+                        </div>
+                        <div class="timeline-item @(GetTimelineStatus(RentalStatus.Active, Model.Status))">
+                            <div class="timeline-marker"></div>
+                            <div class="timeline-content">
+                                <h6>Đang thuê</h6>
+                                <small>Xe đang được sử dụng</small>
+                            </div>
+                        </div>
+                        <div class="timeline-item @(GetTimelineStatus(RentalStatus.Completed, Model.Status))">
+                            <div class="timeline-marker"></div>
+                            <div class="timeline-content">
+                                <h6>Hoàn thành</h6>
+                                <small>Đơn thuê đã kết thúc</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Reject Modal -->
+<div class="modal fade" id="rejectModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Từ chối đơn thuê #@Model.RentalId</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form asp-action="Reject" asp-route-id="@Model.RentalId" method="post">
+                @Html.AntiForgeryToken()
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="reason" class="form-label">Lý do từ chối</label>
+                        <textarea class="form-control" id="reason" name="reason" rows="3" 
+                                  placeholder="Nhập lý do từ chối đơn thuê..."></textarea>
+                        <small class="text-muted">Lý do này sẽ được gửi đến chủ xe.</small>
+                    </div>
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <strong>Cảnh báo:</strong> Sau khi từ chối, bạn sẽ không còn là tài xế của đơn thuê này.
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+                    <button type="submit" class="btn btn-danger">
+                        <i class="fas fa-times"></i> Xác nhận từ chối
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function showRejectModal() {
+            const modal = new bootstrap.Modal(document.getElementById('rejectModal'));
+            modal.show();
+        }
+    </script>
+}
+
+@section Styles {
+    <style>
+        .timeline {
+            position: relative;
+            padding-left: 30px;
+        }
+
+        .timeline-item {
+            position: relative;
+            padding-bottom: 20px;
+        }
+
+        .timeline-item:not(:last-child)::before {
+            content: '';
+            position: absolute;
+            left: -23px;
+            top: 20px;
+            width: 2px;
+            height: calc(100% - 10px);
+            background-color: #e9ecef;
+        }
+
+        .timeline-item.completed::before {
+            background-color: #28a745;
+        }
+
+        .timeline-marker {
+            position: absolute;
+            left: -30px;
+            top: 5px;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background-color: #e9ecef;
+            border: 2px solid #fff;
+        }
+
+        .timeline-item.completed .timeline-marker {
+            background-color: #28a745;
+        }
+
+        .timeline-item.active .timeline-marker {
+            background-color: #ffc107;
+            box-shadow: 0 0 0 3px rgba(255, 193, 7, 0.2);
+        }
+
+        .timeline-content h6 {
+            margin: 0;
+            font-size: 0.9rem;
+        }
+
+        .timeline-content small {
+            color: #6c757d;
+        }
+    </style>
+}
+
+@functions {
+    private string GetStatusBadgeClass(RentalStatus status)
+    {
+        return status switch
+        {
+            RentalStatus.Pending => "secondary",
+            RentalStatus.Confirmed => "warning",
+            RentalStatus.Active => "success",
+            RentalStatus.Completed => "primary",
+            RentalStatus.Cancelled => "danger",
+            _ => "secondary"
+        };
+    }
+
+    private string GetStatusText(RentalStatus status)
+    {
+        return status switch
+        {
+            RentalStatus.Pending => "Chờ xác nhận",
+            RentalStatus.Confirmed => "Đã xác nhận",
+            RentalStatus.Active => "Đang thuê",
+            RentalStatus.Completed => "Hoàn thành",
+            RentalStatus.Cancelled => "Đã hủy",
+            _ => "Không xác định"
+        };
+    }
+
+    private string GetTimelineStatus(RentalStatus targetStatus, RentalStatus currentStatus)
+    {
+        var statusOrder = new Dictionary<RentalStatus, int>
+        {
+            [RentalStatus.Confirmed] = 1,
+            [RentalStatus.Active] = 2,
+            [RentalStatus.Completed] = 3
+        };
+
+        if (currentStatus == RentalStatus.Cancelled)
+            return "";
+
+        var targetOrder = statusOrder.GetValueOrDefault(targetStatus, 0);
+        var currentOrder = statusOrder.GetValueOrDefault(currentStatus, 0);
+
+        if (currentOrder > targetOrder)
+            return "completed";
+        else if (currentOrder == targetOrder)
+            return "active";
+        else
+            return "";
+    }
+}

@@ -1,0 +1,620 @@
+﻿@using carrentalmvc.Models
+@using carrentalmvc.Models.Enums
+@model Car
+@{
+    ViewData["Title"] = $"Chi tiết xe - {Model.Name}";
+
+    // Get helper functions from ViewBag
+    var getCarStatusText = ViewBag.GetCarStatusText as Func<CarStatus, string>;
+    var getTransmissionText = ViewBag.GetTransmissionText as Func<Transmission?, string?>;
+    var getFuelTypeText = ViewBag.GetFuelTypeText as Func<FuelType?, string?>;
+    var getFileFormatText = ViewBag.GetFileFormatText as Func<FileFormat, string>;
+
+    // Get statistics from ViewBag
+    var totalRentals = ViewBag.TotalRentals ?? 0;
+    var activeRentals = ViewBag.ActiveRentals ?? 0;
+    var averageRating = ViewBag.AverageRating ?? 0.0;
+    var reviewCount = ViewBag.ReviewCount ?? 0;
+
+    // Get images
+    var carImages = Model.CarImages?.OrderByDescending(img => img.IsPrimary).ThenBy(img => img.CreatedAt).ToList() ?? new List<CarImage>();
+    var imageUrls = carImages.Select(img => img.ImageUrl).ToList();
+
+    // Get 3D model info
+    var model3D = Model.CarModel3D;
+    var model3DUrl = model3D?.ModelUrl;
+    var model3DFileFormat = model3D?.FileFormat;
+
+    // Get features
+    var features = Model.CarFeatures?.Select(cf => cf.Feature).ToList() ?? new List<Feature>();
+
+    // Check if delivery service is available
+    var hasDeliveryService = Model.MaxDeliveryDistance.HasValue && Model.MaxDeliveryDistance > 0;
+
+}
+
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2"><i class="fas fa-car"></i> Chi tiết xe</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <div class="btn-group me-2">
+            <a asp-action="Edit" asp-route-id="@Model.CarId" class="btn btn-sm btn-warning">
+                <i class="fas fa-edit"></i> Chỉnh sửa
+            </a>
+            @if (Model.Status == CarStatus.Available)
+            {
+                <button type="button" class="btn btn-sm btn-outline-warning" onclick="updateStatus(@Model.CarId, '@CarStatus.Maintenance')">
+                    <i class="fas fa-wrench"></i> Bảo trì
+                </button>
+            }
+            else if (Model.Status == CarStatus.Maintenance)
+            {
+                <button type="button" class="btn btn-sm btn-outline-success" onclick="updateStatus(@Model.CarId, '@CarStatus.Available')">
+                    <i class="fas fa-check"></i> Sẵn sàng
+                </button>
+            }
+            <a asp-action="Delete" asp-route-id="@Model.CarId" class="btn btn-sm btn-danger">
+                <i class="fas fa-trash"></i> Xóa
+            </a>
+        </div>
+        <div class="btn-group">
+            <a asp-action="Index" class="btn btn-sm btn-outline-secondary">
+                <i class="fas fa-arrow-left"></i> Quay lại
+            </a>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Car Images and 3D Model -->
+    <div class="col-md-6">
+        <!-- Car Images -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="fas fa-images"></i> Hình ảnh xe</h6>
+            </div>
+            <div class="card-body">
+                @if (imageUrls.Any())
+                {
+                    <div id="carImageCarousel" class="carousel slide" data-bs-ride="carousel">
+                        <div class="carousel-inner">
+                            @for (int i = 0; i < imageUrls.Count; i++)
+                            {
+                                <div class="carousel-item @(i == 0 ? "active" : "")">
+                                    <img src="@imageUrls[i]" class="d-block w-100 rounded" alt="Car image" style="height: 300px; object-fit: cover;">
+                                </div>
+                            }
+                        </div>
+                        @if (imageUrls.Count > 1)
+                        {
+                            <button class="carousel-control-prev" type="button" data-bs-target="#carImageCarousel" data-bs-slide="prev">
+                                <span class="carousel-control-prev-icon"></span>
+                            </button>
+                            <button class="carousel-control-next" type="button" data-bs-target="#carImageCarousel" data-bs-slide="next">
+                                <span class="carousel-control-next-icon"></span>
+                            </button>
+                        }
+                        <!-- Image indicators -->
+                        <div class="carousel-indicators">
+                            @for (int i = 0; i < imageUrls.Count; i++)
+                            {
+                                <button type="button" data-bs-target="#carImageCarousel" data-bs-slide-to="@i" class="@(i == 0 ? "active" : "")" aria-label="Slide @(i + 1)"></button>
+                            }
+                        </div>
+                    </div>
+                }
+                else
+                {
+                    <div class="bg-light rounded d-flex align-items-center justify-content-center" style="height: 300px;">
+                        <div class="text-center text-muted">
+                            <i class="fas fa-car fa-5x mb-3"></i>
+                            <p>Chưa có hình ảnh</p>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <!-- 3D Model Viewer -->
+        @if (!string.IsNullOrEmpty(model3DUrl) && model3DFileFormat.HasValue && (model3DFileFormat.Value == FileFormat.GLB || model3DFileFormat.Value == FileFormat.GLTF))
+        {
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h6 class="mb-0">
+                        <i class="fas fa-cube"></i> Mô hình 3D tương tác
+                        <span class="badge bg-success ms-2">@(getFileFormatText != null ? getFileFormatText(model3DFileFormat.Value) : model3DFileFormat.ToString())</span>
+                    </h6>
+                </div>
+                <div class="card-body p-0">
+                    <div style="height: 400px;">
+                        @await Html.PartialAsync("_Model3DViewer", model3DUrl)
+                    </div>
+                </div>
+                <div class="card-footer text-muted small">
+                    <i class="fas fa-mouse"></i> Sử dụng chuột để xoay, phóng to/thu nhỏ mô hình
+                    <span class="float-end">
+                        <i class="fas fa-mobile-alt"></i> Nhấn AR để xem trên điện thoại
+                    </span>
+                </div>
+            </div>
+        }
+
+        <!-- Car Features -->
+        @if (features.Any())
+        {
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="fas fa-star"></i> Tính năng xe</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        @foreach (var feature in features)
+                        {
+                            <div class="col-md-6 mb-2">
+                                <div class="d-flex align-items-center">
+                                    <i class="@(feature.Icon ?? "fas fa-check") text-primary me-2"></i>
+                                    <span>@feature.Name</span>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+
+    <!-- Car Details and Sidebar -->
+    <div class="col-md-6">
+        <!-- Status Card -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0"><i class="fas fa-info-circle"></i> Trạng thái xe</h6>
+                    <span class="badge bg-@(GetCarStatusBadgeClass(Model.Status)) fs-6">
+                        @(getCarStatusText != null ? getCarStatusText(Model.Status) : Model.Status.ToString())
+                    </span>
+                </div>
+            </div>
+            <div class="card-body">
+                @if (Model.Status == CarStatus.PendingApproval)
+                {
+                    <div class="alert alert-warning mb-3">
+                        <i class="fas fa-hourglass-half me-2"></i>
+                        <strong>Xe đang chờ admin duyệt</strong>
+                        <p class="mb-0 small">Sau khi được duyệt, xe sẽ có thể cho thuê.</p>
+                    </div>
+                }
+                else if (Model.Status == CarStatus.Rented)
+                {
+                    <div class="alert alert-info mb-3">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <strong>Xe đang được thuê</strong>
+                        <p class="mb-0 small">Không thể chỉnh sửa khi xe đang trong quá trình thuê.</p>
+                    </div>
+                }
+
+                <div class="d-grid gap-2">
+                    @if (Model.Status == CarStatus.Available)
+                    {
+                        <button class="btn btn-outline-warning btn-sm" onclick="updateStatus(@Model.CarId, '@CarStatus.Maintenance')">
+                            <i class="fas fa-wrench"></i> Chuyển sang bảo trì
+                        </button>
+                    }
+                    else if (Model.Status == CarStatus.Maintenance)
+                    {
+                        <button class="btn btn-outline-success btn-sm" onclick="updateStatus(@Model.CarId, '@CarStatus.Available')">
+                            <i class="fas fa-check"></i> Chuyển sang sẵn sàng
+                        </button>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <!-- Car Information -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="fas fa-car-side"></i> Thông tin xe</h6>
+            </div>
+            <div class="card-body">
+                <dl class="row">
+                    <dt class="col-sm-4">ID:</dt>
+                    <dd class="col-sm-8">#@Model.CarId</dd>
+
+                    <dt class="col-sm-4">Tên xe:</dt>
+                    <dd class="col-sm-8">
+                        <h5 class="text-primary mb-0">@Model.Name</h5>
+                    </dd>
+
+                    <dt class="col-sm-4">Thương hiệu:</dt>
+                    <dd class="col-sm-8">
+                        <span class="badge bg-info">@(Model.Brand?.Name ?? "N/A")</span>
+                    </dd>
+
+                    <dt class="col-sm-4">Loại xe:</dt>
+                    <dd class="col-sm-8">
+                        <span class="badge bg-secondary">@(Model.Category?.Name ?? "N/A")</span>
+                    </dd>
+
+                    @if (Model.Year > 0)
+                    {
+                        <dt class="col-sm-4">Năm sản xuất:</dt>
+                        <dd class="col-sm-8"><strong>@Model.Year</strong></dd>
+                    }
+
+                    <dt class="col-sm-4">Màu sắc:</dt>
+                    <dd class="col-sm-8">
+                        @if (!string.IsNullOrEmpty(Model.Color))
+                        {
+                            <span class="badge bg-light text-dark" style="border: 1px solid #dee2e6;">
+                                <i class="fas fa-palette me-1"></i>@Model.Color
+                            </span>
+                        }
+                        else
+                        {
+                            <em class="text-muted">Chưa cập nhật</em>
+                        }
+                    </dd>
+
+                    <dt class="col-sm-4">Biển số:</dt>
+                    <dd class="col-sm-8">
+                        @if (!string.IsNullOrEmpty(Model.LicensePlate))
+                        {
+                            <span class="badge bg-dark">@Model.LicensePlate</span>
+                        }
+                        else
+                        {
+                            <em class="text-muted">Chưa cập nhật</em>
+                        }
+                    </dd>
+
+                    <dt class="col-sm-4">Số chỗ ngồi:</dt>
+                    <dd class="col-sm-8">
+                        @if (Model.Seats.HasValue && Model.Seats > 0)
+                        {
+                            <span class="badge bg-primary">
+                                <i class="fas fa-users me-1"></i>@Model.Seats chỗ
+                            </span>
+                        }
+                        else
+                        {
+                            <em class="text-muted">Chưa cập nhật</em>
+                        }
+                    </dd>
+
+                    <dt class="col-sm-4">Hộp số:</dt>
+                    <dd class="col-sm-8">
+                        @if (Model.Transmission.HasValue)
+                        {
+                            var transmissionText = getTransmissionText != null ? getTransmissionText(Model.Transmission) : Model.Transmission.ToString();
+                            <span class="badge bg-success">@transmissionText</span>
+                        }
+                        else
+                        {
+                            <em class="text-muted">Chưa cập nhật</em>
+                        }
+                    </dd>
+
+                    <dt class="col-sm-4">Nhiên liệu:</dt>
+                    <dd class="col-sm-8">
+                        @if (Model.FuelType.HasValue)
+                        {
+                            var fuelTypeText = getFuelTypeText != null ? getFuelTypeText(Model.FuelType) : Model.FuelType.ToString();
+                            <span class="badge bg-warning text-dark">
+                                <i class="fas fa-gas-pump me-1"></i>@fuelTypeText
+                            </span>
+                        }
+                        else
+                        {
+                            <em class="text-muted">Chưa cập nhật</em>
+                        }
+                    </dd>
+
+                    @if (Model.FuelConsumption.HasValue && Model.FuelConsumption > 0)
+                    {
+                        <dt class="col-sm-4">Tiêu thụ:</dt>
+                        <dd class="col-sm-8">
+                            <span class="badge bg-info">@Model.FuelConsumption.Value.ToString("F1") L/100km</span>
+                        </dd>
+                    }
+                </dl>
+            </div>
+        </div>
+
+        <!-- Pricing -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="fas fa-money-bill-wave"></i> Giá thuê</h6>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-6">
+                        <div class="border-end">
+                            <h4 class="text-success">@Model.PricePerDay.ToString("N0")</h4>
+                            <small class="text-muted">VNĐ/ngày</small>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        @if (Model.PricePerHour.HasValue)
+                        {
+                            <h4 class="text-info">@Model.PricePerHour.Value.ToString("N0")</h4>
+                            <small class="text-muted">VNĐ/giờ</small>
+                        }
+                        else
+                        {
+                            <h4 class="text-muted">N/A</h4>
+                            <small class="text-muted">VNĐ/giờ</small>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Delivery Configuration -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h6 class="mb-0">
+                    <i class="fas fa-shipping-fast"></i> Cấu hình giao xe
+                    @if (hasDeliveryService)
+                    {
+                        <span class="badge bg-success ms-2">Có giao xe</span>
+                    }
+                    else
+                    {
+                        <span class="badge bg-secondary ms-2">Không giao xe</span>
+                    }
+                </h6>
+            </div>
+            <div class="card-body">
+                @if (hasDeliveryService)
+                {
+                    <dl class="row mb-0">
+                        <dt class="col-sm-7">
+                            <i class="fas fa-map-marked-alt text-primary me-1"></i>
+                            Khoảng cách tối đa:
+                        </dt>
+                        <dd class="col-sm-5">
+                            <span class="badge bg-primary">
+                                @Model.MaxDeliveryDistance km
+                            </span>
+                        </dd>
+
+                        <dt class="col-sm-7">
+                            <i class="fas fa-dollar-sign text-success me-1"></i>
+                            Phí giao xe:
+                        </dt>
+                        <dd class="col-sm-5">
+                            @if (Model.PricePerKmDelivery.HasValue && Model.PricePerKmDelivery > 0)
+                            {
+                                <span class="badge bg-success">
+                                    @Model.PricePerKmDelivery.Value.ToString("N0") VNĐ/km
+                                </span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-info">Miễn phí</span>
+                            }
+                        </dd>
+                    </dl>
+
+                    <!-- Delivery Fee Calculator Preview -->
+                    @if (Model.PricePerKmDelivery.HasValue && Model.PricePerKmDelivery > 0)
+                    {
+                        <hr class="my-3">
+                        <div class="small text-muted mb-2">
+                            <i class="fas fa-calculator me-1"></i>Ước tính phí giao xe:
+                        </div>
+                        <div class="row text-center">
+                            @{
+                                var distances = new[] { 10, 25, 50 };
+                                foreach (var dist in distances)
+                                {
+                                    var isInRange = dist <= Model.MaxDeliveryDistance.Value;
+                                    var fee = isInRange ? dist * Model.PricePerKmDelivery.Value : 0;
+
+                                    <div class="col-4">
+                                        <div class="p-2 @(isInRange ? "bg-light" : "bg-secondary bg-opacity-10") rounded">
+                                            <small class="text-muted d-block">@dist km</small>
+                                            @if (isInRange)
+                                            {
+                                                <strong class="text-primary">@fee.ToString("N0")</strong>
+                                            }
+                                            else
+                                            {
+                                                <small class="text-muted">Ngoài<br />phạm vi</small>
+                                            }
+                                        </div>
+                                    </div>
+                                }
+                            }
+                        </div>
+                    }
+                }
+                else
+                {
+                    <div class="alert alert-info mb-0">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <strong>Không cung cấp dịch vụ giao xe</strong>
+                        <p class="mb-0 small mt-2">
+                            Khách hàng cần đến vị trí xe để nhận xe.
+                            Bạn có thể <a asp-action="Edit" asp-route-id="@Model.CarId" class="alert-link">cập nhật cấu hình giao xe</a> để thu hút thêm khách hàng.
+                        </p>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <!-- Location Information -->
+        @if (!string.IsNullOrEmpty(Model.Location) || (Model.Latitude.HasValue && Model.Longitude.HasValue))
+        {
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="fas fa-map-marker-alt"></i> Vị trí xe</h6>
+                </div>
+                <div class="card-body">
+                    @if (!string.IsNullOrEmpty(Model.Location))
+                    {
+                        <p class="mb-2"><i class="fas fa-map-marked-alt text-primary"></i> @Model.Location</p>
+                    }
+                    @if (Model.Latitude.HasValue && Model.Longitude.HasValue)
+                    {
+                        <p class="mb-0 small text-muted">
+                            <i class="fas fa-crosshairs"></i>
+                            Tọa độ: @Model.Latitude.Value.ToString("F6"), @Model.Longitude.Value.ToString("F6")
+                        </p>
+                        <div class="mt-2">
+                            <a href="https://www.google.com/maps?q=@Model.Latitude,@Model.Longitude"
+                               target="_blank" class="btn btn-sm btn-outline-primary">
+                                <i class="fas fa-external-link-alt"></i> Xem trên Google Maps
+                            </a>
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+
+        <!-- Statistics -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="fas fa-chart-bar"></i> Thống kê</h6>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-4">
+                        <h4 class="text-primary">@totalRentals</h4>
+                        <small class="text-muted">Tổng thuê</small>
+                    </div>
+                    <div class="col-4">
+                        <h4 class="text-warning">@activeRentals</h4>
+                        <small class="text-muted">Đang thuê</small>
+                    </div>
+                    <div class="col-4">
+                        <div class="d-flex flex-column align-items-center">
+                            <h4 class="text-success mb-0">@averageRating.ToString("F1")</h4>
+                            <div class="text-warning small">
+                                @for (int i = 1; i <= 5; i++)
+                                {
+                                    if (i <= averageRating)
+                                    {
+                                        <i class="fas fa-star"></i>
+                                    }
+                                    else
+                                    {
+                                        <i class="far fa-star"></i>
+                                    }
+                                }
+                            </div>
+                            <small class="text-muted">(@reviewCount)</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="fas fa-bolt"></i> Thao tác nhanh</h6>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a asp-action="Edit" asp-route-id="@Model.CarId" class="btn btn-outline-warning">
+                        <i class="fas fa-edit"></i> Chỉnh sửa thông tin
+                    </a>
+
+                    <a asp-controller="Rentals" asp-action="Index" asp-route-carId="@Model.CarId" class="btn btn-outline-primary">
+                        <i class="fas fa-file-contract"></i> Xem đơn thuê
+                    </a>
+
+                    <hr>
+
+                    <a asp-action="Delete" asp-route-id="@Model.CarId" class="btn btn-outline-danger">
+                        <i class="fas fa-trash"></i> Xóa xe
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Description -->
+@if (!string.IsNullOrEmpty(Model.Description))
+{
+    <div class="card mt-4">
+        <div class="card-header">
+            <h6 class="mb-0"><i class="fas fa-align-left"></i> Mô tả xe</h6>
+        </div>
+        <div class="card-body">
+            <p class="mb-0">@Model.Description</p>
+        </div>
+    </div>
+}
+
+<!-- Timestamps -->
+<div class="card mt-4">
+    <div class="card-header">
+        <h6 class="mb-0"><i class="fas fa-clock"></i> Thông tin thời gian</h6>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-6">
+                <small class="text-muted">
+                    <i class="fas fa-calendar-plus"></i> Ngày tạo:
+                    <strong>@Model.CreatedAt.ToString("dd/MM/yyyy HH:mm")</strong>
+                </small>
+            </div>
+            <div class="col-md-6">
+                <small class="text-muted">
+                    <i class="fas fa-calendar-check"></i> Cập nhật lần cuối:
+                    <strong>@Model.UpdatedAt.ToString("dd/MM/yyyy HH:mm")</strong>
+                </small>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function updateStatus(carId, status) {
+            if (confirm('Bạn có chắc chắn muốn thay đổi trạng thái xe này?')) {
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = '@Url.Action("UpdateStatus")';
+
+                const carIdInput = document.createElement('input');
+                carIdInput.type = 'hidden';
+                carIdInput.name = 'id';
+                carIdInput.value = carId;
+
+                const statusInput = document.createElement('input');
+                statusInput.type = 'hidden';
+                statusInput.name = 'status';
+                statusInput.value = status;
+
+                const tokenInput = document.createElement('input');
+                tokenInput.type = 'hidden';
+                tokenInput.name = '__RequestVerificationToken';
+                tokenInput.value = $('input[name="__RequestVerificationToken"]').val();
+
+                form.appendChild(carIdInput);
+                form.appendChild(statusInput);
+                form.appendChild(tokenInput);
+
+                document.body.appendChild(form);
+                form.submit();
+            }
+        }
+    </script>
+}
+
+@functions {
+    private string GetCarStatusBadgeClass(CarStatus status)
+    {
+        return status switch
+        {
+            CarStatus.Available => "success",
+            CarStatus.Rented => "warning",
+            CarStatus.Maintenance => "danger",
+            CarStatus.PendingApproval => "secondary",
+            _ => "secondary"
+        };
+    }
+}

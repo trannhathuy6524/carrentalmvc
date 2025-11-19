@@ -1,0 +1,133 @@
+﻿@using carrentalmvc.Models
+@model Brand
+@{
+    ViewData["Title"] = "Thêm thương hiệu mới";
+}
+
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2"><i class="fas fa-plus"></i> Thêm thương hiệu mới</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <div class="btn-group">
+            <a asp-action="Index" class="btn btn-sm btn-outline-secondary">
+                <i class="fas fa-arrow-left"></i> Quay lại
+            </a>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0">Thông tin thương hiệu</h6>
+            </div>
+            <div class="card-body">
+                <form asp-action="Create" method="post">
+                    @Html.AntiForgeryToken()
+                    <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+
+                    <div class="mb-3">
+                        <label asp-for="Name" class="form-label"></label>
+                        <input asp-for="Name" class="form-control" placeholder="Nhập tên thương hiệu..." />
+                        <span asp-validation-for="Name" class="text-danger"></span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="Description" class="form-label"></label>
+                        <textarea asp-for="Description" class="form-control" rows="4"
+                                  placeholder="Nhập mô tả về thương hiệu này..."></textarea>
+                        <span asp-validation-for="Description" class="text-danger"></span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="LogoUrl" class="form-label"></label>
+                        <input asp-for="LogoUrl" id="logo-input" class="form-control" placeholder="https://example.com/logo.png" />
+                        <span asp-validation-for="LogoUrl" class="text-danger"></span>
+                        <div class="form-text">URL hình ảnh logo của thương hiệu</div>
+                    </div>
+
+                    <div class="d-flex justify-content-between">
+                        <a asp-action="Index" class="btn btn-secondary">
+                            <i class="fas fa-times"></i> Hủy
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save"></i> Lưu thương hiệu
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h6 class="mb-0">Xem trước logo</h6>
+            </div>
+            <div class="card-body text-center">
+                <div id="logo-preview" class="p-3 border rounded">
+                    <img id="preview-image" src="" alt="Logo preview" class="img-fluid rounded" style="max-width: 150px; max-height: 150px; display: none;">
+                    <div id="preview-placeholder" class="bg-light d-flex align-items-center justify-content-center rounded" style="width: 150px; height: 150px; margin: 0 auto;">
+                        <i class="fas fa-image fa-3x text-muted"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0">Hướng dẫn</h6>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-info">
+                    <h6><i class="fas fa-info-circle"></i> Lưu ý</h6>
+                    <ul class="mb-0">
+                        <li>Tên thương hiệu phải duy nhất trong hệ thống</li>
+                        <li>Logo nên có kích thước vuông (1:1) để hiển thị tốt nhất</li>
+                        <li>Định dạng ảnh khuyến nghị: PNG với nền trong suốt</li>
+                        <li>Kích thước tối ưu: 200x200px</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+    <script>
+        $(document).ready(function () {
+            // Logo preview
+            $('#logo-input').on('input', function () {
+                var logoUrl = $(this).val().trim();
+                var $previewImage = $('#preview-image');
+                var $placeholder = $('#preview-placeholder');
+
+                if (logoUrl && isValidUrl(logoUrl)) {
+                    $previewImage.attr('src', logoUrl).show();
+                    $placeholder.hide();
+
+                    // Handle image load error
+                    $previewImage.off('error').on('error', function () {
+                        $(this).hide();
+                        $placeholder.show();
+                    });
+                } else {
+                    $previewImage.hide();
+                    $placeholder.show();
+                }
+            });
+
+            function isValidUrl(string) {
+                try {
+                    new URL(string);
+                    return true;
+                } catch (_) {
+                    return false;
+                }
+            }
+        });
+    </script>
+}

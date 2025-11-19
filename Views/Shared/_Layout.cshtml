@@ -1,0 +1,253 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - carrentalmvc</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/carrentalmvc.styles.css" asp-append-version="true" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
+
+    <!-- Google Model Viewer - chỉ giữ một bộ script -->
+    <script type="module" src="https://cdn.jsdelivr.net/npm/@@google/model-viewer@@3.3.0/dist/model-viewer.min.js"></script>
+    <script nomodule src="https://cdn.jsdelivr.net/npm/@@google/model-viewer@@3.3.0/dist/model-viewer-legacy.js"></script>
+    
+    @await RenderSectionAsync("Styles", required: false)
+</head>
+<body>
+    <header>
+        <nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-light bg-white border-bottom box-shadow mb-3">
+            <div class="container-fluid">
+                <a class="navbar-brand" asp-area="" asp-controller="Home" asp-action="Index">carrentalmvc</a>
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target=".navbar-collapse" aria-controls="navbarSupportedContent"
+                        aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                <div class="navbar-collapse collapse d-sm-inline-flex justify-content-between">
+                    <ul class="navbar-nav flex-grow-1">
+
+                        <li class="nav-item">
+                            <a class="nav-link text-dark" asp-area="" asp-controller="Home" asp-action="Index">Home</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link text-dark" asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link text-dark" asp-area="" asp-controller="DriverRequest" asp-action="Create">
+                                <i class="fas fa-user-tie"></i> Trở thành tài xế
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link text-dark" asp-area="" asp-controller="CarOwnerRequest" asp-action="Create">
+                                <i class="fas fa-car-alt"></i> Trở thành chủ xe
+                            </a>
+                        </li>
+                        <!-- Menu Customer -->
+                        @if (User.IsInRole("Customer"))
+                        {
+                            <li class="nav-item dropdown">
+                                <a class="nav-link dropdown-toggle text-dark" href="#" id="customerDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                    <i class="fas fa-user"></i> Khách hàng
+                                </a>
+                                <ul class="dropdown-menu" aria-labelledby="customerDropdown">
+                                    <li>
+                                        <a class="dropdown-item" asp-area="Customer" asp-controller="Rentals" asp-action="Index">
+                                            <i class="fas fa-clipboard-list"></i> Đơn thuê của tôi
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a class="dropdown-item" asp-area="Customer" asp-controller="Cars" asp-action="Index">
+                                            <i class="fas fa-search"></i> Tìm xe
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a class="dropdown-item" asp-area="Customer" asp-controller="Payments" asp-action="Index">
+                                            <i class="fas fa-credit-card"></i> Thanh toán
+                                        </a>
+                                    </li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li>
+                                        <a class="dropdown-item" asp-area="Customer" asp-controller="Reviews" asp-action="Index">
+                                            <i class="fas fa-star"></i> Đánh giá của tôi
+                                        </a>
+                                    </li>
+                                </ul>
+                            </li>
+                        }
+
+                        <!-- Menu Car Owner -->
+                        @if (User.IsInRole("CarOwner"))
+                        {
+                            <li class="nav-item dropdown">
+                                <a class="nav-link dropdown-toggle text-dark" href="#" id="ownerDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                    <i class="fas fa-car-alt"></i> Chủ xe
+                                </a>
+                                <ul class="dropdown-menu" aria-labelledby="ownerDropdown">
+                                    <li>
+                                        <a class="dropdown-item" asp-area="CarOwner" asp-controller="Dashboard" asp-action="Index">
+                                            <i class="fas fa-tachometer-alt"></i> Dashboard
+                                        </a>
+                                    </li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li>
+                                        <a class="dropdown-item" asp-area="CarOwner" asp-controller="Cars" asp-action="Index">
+                                            <i class="fas fa-list"></i> Xe của tôi
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a class="dropdown-item" asp-area="CarOwner" asp-controller="Cars" asp-action="Create">
+                                            <i class="fas fa-plus-circle"></i> Thêm xe mới
+                                        </a>
+                                    </li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li>
+                                        <a class="dropdown-item" asp-area="CarOwner" asp-controller="Rentals" asp-action="Index">
+                                            <i class="fas fa-file-contract"></i> Quản lý đơn thuê
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a class="dropdown-item" asp-area="CarOwner" asp-controller="Payments" asp-action="Index">
+                                            <i class="fas fa-money-bill-wave"></i> Thu nhập
+                                        </a>
+                                    </li>
+                                </ul>
+                            </li>
+                        }
+
+                        <!-- Menu Admin -->
+                        @if (User.IsInRole("Admin"))
+                        {
+                            <li class="nav-item dropdown">
+                                <a class="nav-link dropdown-toggle text-dark" href="#" id="adminDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                    <i class="fas fa-cog"></i> Quản trị
+                                </a>
+                                <ul class="dropdown-menu" aria-labelledby="adminDropdown">
+                                    <li>
+                                        <a class="dropdown-item" asp-area="Admin" asp-controller="Dashboard" asp-action="Index">
+                                            <i class="fas fa-chart-line"></i> Dashboard
+                                        </a>
+                                    </li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li>
+                                        <a class="dropdown-item" asp-area="Admin" asp-controller="Users" asp-action="Index">
+                                            <i class="fas fa-users"></i> Người dùng
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a class="dropdown-item" asp-area="Admin" asp-controller="CarOwnerRequests" asp-action="Index">
+                                            <i class="fas fa-user-check"></i> Duyệt chủ xe
+                                        </a>
+                                    </li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li>
+                                        <a class="dropdown-item" asp-area="Admin" asp-controller="Cars" asp-action="Index">
+                                            <i class="fas fa-car"></i> Quản lý xe
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a class="dropdown-item" asp-area="Admin" asp-controller="Cars" asp-action="PendingApproval">
+                                            <i class="fas fa-hourglass-half"></i> Duyệt xe
+                                        </a>
+                                    </li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li>
+                                        <a class="dropdown-item" asp-area="Admin" asp-controller="Rentals" asp-action="Index">
+                                            <i class="fas fa-file-invoice"></i> Đơn thuê
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a class="dropdown-item" asp-area="Admin" asp-controller="Payments" asp-action="Index">
+                                            <i class="fas fa-dollar-sign"></i> Thanh toán
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a class="dropdown-item" asp-area="Admin" asp-controller="Reviews" asp-action="Index">
+                                            <i class="fas fa-comments"></i> Đánh giá
+                                        </a>
+                                    </li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li>
+                                        <a class="dropdown-item" asp-area="Admin" asp-controller="Brands" asp-action="Index">
+                                            <i class="fas fa-trademark"></i> Hãng xe
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a class="dropdown-item" asp-area="Admin" asp-controller="Categories" asp-action="Index">
+                                            <i class="fas fa-tags"></i> Loại xe
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a class="dropdown-item" asp-area="Admin" asp-controller="Features" asp-action="Index">
+                                            <i class="fas fa-puzzle-piece"></i> Tính năng
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a class="dropdown-item" asp-area="Admin" asp-controller="Model3DTemplates" asp-action="Index">
+                                            <i class="fas fa-cube"></i> Mẫu 3D
+                                        </a>
+                                    </li>
+                                </ul>
+                            </li>
+                        }
+
+                        <!-- Menu Staff (Nhân viên) -->
+                        @if (User.IsInRole("Staff"))
+                        {
+                            <li class="nav-item dropdown">
+                                <a class="nav-link dropdown-toggle text-dark" href="#" id="staffDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                    <i class="fas fa-user-tie"></i> Nhân viên
+                                </a>
+                                <ul class="dropdown-menu" aria-labelledby="staffDropdown">
+                                    <li>
+                                        <a class="dropdown-item" asp-area="Staff" asp-controller="Dashboard" asp-action="Index">
+                                            <i class="fas fa-tachometer-alt"></i> Dashboard
+                                        </a>
+                                    </li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li>
+                                        <a class="dropdown-item" asp-area="Staff" asp-controller="Cars" asp-action="Index">
+                                            <i class="fas fa-car"></i> Danh sách xe
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a class="dropdown-item" asp-area="Staff" asp-controller="Rentals" asp-action="Index">
+                                            <i class="fas fa-file-contract"></i> Đơn thuê
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a class="dropdown-item" asp-area="Staff" asp-controller="Payments" asp-action="Index">
+                                            <i class="fas fa-money-bill-wave"></i> Thanh toán
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a class="dropdown-item" asp-area="Staff" asp-controller="Reviews" asp-action="Index">
+                                            <i class="fas fa-star"></i> Đánh giá
+                                        </a>
+                                    </li>
+                                </ul>
+                            </li>
+                        }
+                    </ul>
+                    <partial name="_LoginPartial" />
+                </div>
+            </div>
+        </nav>
+    </header>
+    <div class="container">
+        <main role="main" class="pb-3">
+            @RenderBody()
+        </main>
+    </div>
+
+    <footer class="border-top footer text-muted">
+        <div class="container">
+            &copy; 2024 - carrentalmvc - <a asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>
+        </div>
+    </footer>
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

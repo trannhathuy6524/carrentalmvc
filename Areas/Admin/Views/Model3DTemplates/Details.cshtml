@@ -1,0 +1,256 @@
+﻿@using carrentalmvc.Models.Enums
+@model carrentalmvc.Models.Model3DTemplate
+@{
+    ViewData["Title"] = "Chi tiết mô hình 3D";
+
+    var fileFormatText = ViewBag.FileFormatText as string ?? Model.FileFormat.ToString();
+    var fileSizeText = ViewBag.FileSizeText as string ?? (Model.FileSize.HasValue ? $"{Model.FileSize.Value} B" : "N/A");
+    var brandName = ViewBag.BrandName as string ?? Model.Brand?.Name ?? "Chung";
+    var categoryName = ViewBag.CategoryName as string ?? Model.Category?.Name ?? "Chung";
+    var usageCount = ViewBag.UsageCount != null ? (int)ViewBag.UsageCount : (Model.CarModels3D?.Count ?? 0);
+}
+<script type="module" src="https://unpkg.com/@@google/model-viewer@@3.3.0/dist/model-viewer.min.js"></script>
+
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2"><i class="fas fa-cube"></i> Chi tiết mô hình 3D</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <div class="btn-group">
+            <a asp-action="Edit" asp-route-id="@Model.TemplateId" class="btn btn-sm btn-warning">
+                <i class="fas fa-edit"></i> Chỉnh sửa
+            </a>
+            <a asp-action="Delete" asp-route-id="@Model.TemplateId" class="btn btn-sm btn-danger">
+                <i class="fas fa-trash"></i> Xóa
+            </a>
+            <a asp-action="Index" class="btn btn-sm btn-outline-secondary">
+                <i class="fas fa-arrow-left"></i> Quay lại
+            </a>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <!-- 3D Model Viewer -->
+        @if (Model.FileFormat == FileFormat.GLB || Model.FileFormat == FileFormat.GLTF)
+        {
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-cube"></i> Mô hình 3D tương tác
+                        <span class="badge bg-success ms-2">@fileFormatText</span>
+                    </h5>
+                </div>
+                <div class="card-body p-0">
+                    <div style="height: 500px;">
+                        @await Html.PartialAsync("_Model3DViewer", Model.ModelUrl)
+                    </div>
+                </div>
+                <div class="card-footer text-muted small">
+                    <i class="fas fa-mouse"></i> Sử dụng chuột để xoay, phóng to/thu nhỏ mô hình
+                </div>
+            </div>
+        }
+
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">@Model.Name</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <dl class="row">
+                            <dt class="col-sm-4">Tên mô hình:</dt>
+                            <dd class="col-sm-8">@Model.Name</dd>
+
+                            <dt class="col-sm-4">Mô tả:</dt>
+                            <dd class="col-sm-8">
+                                @if (!string.IsNullOrEmpty(Model.Description))
+                                {
+                                    @Model.Description
+                                }
+                                else
+                                {
+                                    <span class="text-muted">Không có mô tả</span>
+                                }
+                            </dd>
+
+                            <dt class="col-sm-4">Định dạng:</dt>
+                            <dd class="col-sm-8">
+                                <span class="badge bg-info">@fileFormatText</span>
+                            </dd>
+
+                            <dt class="col-sm-4">Kích thước:</dt>
+                            <dd class="col-sm-8">@fileSizeText</dd>
+
+                            <dt class="col-sm-4">Thương hiệu:</dt>
+                            <dd class="col-sm-8">@brandName</dd>
+
+                            <dt class="col-sm-4">Loại xe:</dt>
+                            <dd class="col-sm-8">@categoryName</dd>
+                        </dl>
+                    </div>
+
+                    <div class="col-md-6">
+                        <dl class="row">
+                            <dt class="col-sm-4">Trạng thái:</dt>
+                            <dd class="col-sm-8">
+                                @if (Model.IsActive)
+                                {
+                                    <span class="badge bg-success">Hoạt động</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-secondary">Tạm dừng</span>
+                                }
+                            </dd>
+
+                            <dt class="col-sm-4">Số lượng sử dụng:</dt>
+                            <dd class="col-sm-8">
+                                <span class="badge bg-primary">@usageCount xe</span>
+                            </dd>
+
+                            <dt class="col-sm-4">Ngày tạo:</dt>
+                            <dd class="col-sm-8">@Model.CreatedAt.ToString("dd/MM/yyyy HH:mm")</dd>
+
+                            <dt class="col-sm-4">Cập nhật cuối:</dt>
+                            <dd class="col-sm-8">@Model.UpdatedAt.ToString("dd/MM/yyyy HH:mm")</dd>
+                        </dl>
+                    </div>
+                </div>
+
+                <div class="mt-4">
+                    <h6>URL mô hình 3D:</h6>
+                    <div class="input-group">
+                        <input type="text" class="form-control" value="@Model.ModelUrl" readonly />
+                        <button class="btn btn-outline-secondary" type="button" onclick="copyToClipboard('@Model.ModelUrl')">
+                            <i class="fas fa-copy"></i>
+                        </button>
+                        <a href="@Model.ModelUrl" target="_blank" class="btn btn-outline-primary">
+                            <i class="fas fa-external-link-alt"></i> Mở
+                        </a>
+                    </div>
+                </div>
+
+                @if (!string.IsNullOrEmpty(Model.PreviewImageUrl))
+                {
+                    <div class="mt-4">
+                        <h6>URL hình ảnh xem trước:</h6>
+                        <div class="input-group">
+                            <input type="text" class="form-control" value="@Model.PreviewImageUrl" readonly />
+                            <button class="btn btn-outline-secondary" type="button" onclick="copyToClipboard('@Model.PreviewImageUrl')">
+                                <i class="fas fa-copy"></i>
+                            </button>
+                            <a href="@Model.PreviewImageUrl" target="_blank" class="btn btn-outline-primary">
+                                <i class="fas fa-external-link-alt"></i> Mở
+                            </a>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        @if (Model.FileFormat != FileFormat.GLB && Model.FileFormat != FileFormat.GLTF)
+        {
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="card-title mb-0">Hình ảnh xem trước</h6>
+                </div>
+                <div class="card-body text-center">
+                    @if (!string.IsNullOrEmpty(Model.PreviewImageUrl))
+                    {
+                        <img src="@Model.PreviewImageUrl" alt="@Model.Name" class="img-fluid rounded" style="max-height: 300px;" />
+                    }
+                    else
+                    {
+                        <div class="bg-light d-flex align-items-center justify-content-center rounded" style="height: 200px;">
+                            <div class="text-center">
+                                <i class="fas fa-cube fa-3x text-muted mb-2"></i>
+                                <p class="text-muted mb-0">Không có hình ảnh xem trước</p>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+
+        @if (usageCount > 0)
+        {
+            <div class="card mt-3">
+                <div class="card-header">
+                    <h6 class="card-title mb-0">Thông tin sử dụng</h6>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i>
+                        Mô hình này đang được sử dụng bởi <strong>@usageCount xe</strong>.
+                        Hãy cẩn thận khi thay đổi hoặc xóa.
+                    </div>
+                </div>
+            </div>
+        }
+
+        <div class="card mt-3">
+            <div class="card-header">
+                <h6 class="card-title mb-0">Thông tin kỹ thuật</h6>
+            </div>
+            <div class="card-body">
+                <dl class="row small">
+                    <dt class="col-sm-6">Định dạng:</dt>
+                    <dd class="col-sm-6">@fileFormatText</dd>
+
+                    <dt class="col-sm-6">Kích thước:</dt>
+                    <dd class="col-sm-6">@fileSizeText</dd>
+
+                    <dt class="col-sm-6">Tương tác 3D:</dt>
+                    <dd class="col-sm-6">
+                        @if (Model.FileFormat == FileFormat.GLB || Model.FileFormat == FileFormat.GLTF)
+                        {
+                            <span class="badge bg-success">Có</span>
+                        }
+                        else
+                        {
+                            <span class="badge bg-warning">Không</span>
+                        }
+                    </dd>
+
+                    <dt class="col-sm-6">AR Support:</dt>
+                    <dd class="col-sm-6">
+                        @if (Model.FileFormat == FileFormat.GLB || Model.FileFormat == FileFormat.GLTF)
+                        {
+                            <span class="badge bg-success">Có</span>
+                        }
+                        else
+                        {
+                            <span class="badge bg-secondary">Không</span>
+                        }
+                    </dd>
+                </dl>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(function() {
+                const toast = document.createElement('div');
+                toast.className = 'toast align-items-center text-white bg-success border-0 position-fixed';
+                toast.style.top = '20px';
+                toast.style.right = '20px';
+                toast.style.zIndex = '9999';
+                toast.innerHTML = `
+                    <div class="d-flex">
+                        <div class="toast-body">
+                            <i class="fas fa-check me-2"></i>Đã sao chép vào clipboard!
+                        </div>
+                    </div>
+                `;
+                document.body.appendChild(toast);
+                setTimeout(() => document.body.removeChild(toast), 3000);
+            });
+        }
+    </script>
+}

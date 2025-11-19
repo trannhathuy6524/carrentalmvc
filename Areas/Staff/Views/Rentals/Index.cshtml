@@ -1,0 +1,216 @@
+@model IEnumerable<Rental>
+
+@{
+    ViewData["Title"] = "Danh sách đơn thuê";
+    var status = ViewBag.Status as RentalStatus?;
+    var searchTerm = ViewBag.SearchTerm as string;
+    var totalRentals = (int)(ViewBag.TotalRentals ?? 0);
+    var pendingRentals = (int)(ViewBag.PendingRentals ?? 0);
+    var activeRentals = (int)(ViewBag.ActiveRentals ?? 0);
+    var completedRentals = (int)(ViewBag.CompletedRentals ?? 0);
+}
+
+<div class="container-fluid">
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-1">Đơn thuê xe</h1>
+            <p class="text-muted mb-0">Quản lý và theo dõi tất cả đơn thuê xe</p>
+        </div>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="row mb-4">
+        <div class="col-xl-3 col-md-6 mb-3">
+            <div class="card border-left-primary shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                                Tổng đơn
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">@totalRentals</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-file-contract fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-3">
+            <div class="card border-left-warning shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                                Chờ xác nhận
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">@pendingRentals</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-clock fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-3">
+            <div class="card border-left-success shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                                Đang hoạt động
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">@activeRentals</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-car fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-3">
+            <div class="card border-left-info shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                                Hoàn thành
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">@completedRentals</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-check-circle fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-5">
+                    <label for="searchTerm" class="form-label">Tìm kiếm</label>
+                    <input type="text" class="form-control" id="searchTerm" name="searchTerm" 
+                           value="@searchTerm" placeholder="Mã đơn, tên xe, khách hàng...">
+                </div>
+                <div class="col-md-5">
+                    <label for="status" class="form-label">Trạng thái</label>
+                    <select class="form-select" id="status" name="status">
+                        <option value="">Tất cả</option>
+                        <option value="@((int)RentalStatus.Pending)" selected="@(status == RentalStatus.Pending)">Chờ xác nhận</option>
+                        <option value="@((int)RentalStatus.Confirmed)" selected="@(status == RentalStatus.Confirmed)">Đã xác nhận</option>
+                        <option value="@((int)RentalStatus.Active)" selected="@(status == RentalStatus.Active)">Đang hoạt động</option>
+                        <option value="@((int)RentalStatus.Completed)" selected="@(status == RentalStatus.Completed)">Hoàn thành</option>
+                        <option value="@((int)RentalStatus.Cancelled)" selected="@(status == RentalStatus.Cancelled)">Đã hủy</option>
+                    </select>
+                </div>
+                <div class="col-md-2 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="fas fa-search me-1"></i>Lọc
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Rentals List -->
+    <div class="card shadow-sm">
+        <div class="card-header bg-white py-3">
+            <h6 class="m-0 font-weight-bold text-primary">
+                Tìm thấy @Model.Count() đơn thuê
+            </h6>
+        </div>
+        <div class="card-body">
+            @if (Model.Any())
+            {
+                <div class="table-responsive">
+                    <table class="table table-bordered table-hover">
+                        <thead>
+                            <tr>
+                                <th>Mã đơn</th>
+                                <th>Xe</th>
+                                <th>Khách hàng</th>
+                                <th>Ngày thuê</th>
+                                <th>Ngày trả</th>
+                                <th>Tổng tiền</th>
+                                <th>Trạng thái</th>
+                                <th>Thao tác</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var rental in Model)
+                            {
+                                <tr>
+                                    <td><strong>#@rental.RentalId</strong></td>
+                                    <td>@rental.Car?.Name</td>
+                                    <td>@rental.Renter?.FullName</td>
+                                    <td>@rental.StartDate.ToString("dd/MM/yyyy HH:mm")</td>
+                                    <td>@rental.EndDate.ToString("dd/MM/yyyy HH:mm")</td>
+                                    <td>@rental.TotalPrice.ToString("N0") VNĐ</td>
+                                    <td>
+                                        @switch (rental.Status)
+                                        {
+                                            case RentalStatus.Pending:
+                                                <span class="badge bg-warning">Chờ xác nhận</span>
+                                                break;
+                                            case RentalStatus.Confirmed:
+                                                <span class="badge bg-info">Đã xác nhận</span>
+                                                break;
+                                            case RentalStatus.Active:
+                                                <span class="badge bg-success">Đang hoạt động</span>
+                                                break;
+                                            case RentalStatus.Completed:
+                                                <span class="badge bg-secondary">Hoàn thành</span>
+                                                break;
+                                            case RentalStatus.Cancelled:
+                                                <span class="badge bg-danger">Đã hủy</span>
+                                                break;
+                                        }
+                                    </td>
+                                    <td>
+                                        <a asp-action="Details" asp-route-id="@rental.RentalId" 
+                                           class="btn btn-sm btn-info">
+                                            <i class="fas fa-eye"></i> Xem
+                                        </a>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+            else
+            {
+                <div class="text-center py-5">
+                    <i class="fas fa-file-contract fa-3x text-muted mb-3"></i>
+                    <p class="text-muted">Không tìm thấy đơn thuê nào</p>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<style>
+    .border-left-primary {
+        border-left: 0.25rem solid #4e73df !important;
+    }
+    .border-left-success {
+        border-left: 0.25rem solid #1cc88a !important;
+    }
+    .border-left-info {
+        border-left: 0.25rem solid #36b9cc !important;
+    }
+    .border-left-warning {
+        border-left: 0.25rem solid #f6c23e !important;
+    }
+</style>

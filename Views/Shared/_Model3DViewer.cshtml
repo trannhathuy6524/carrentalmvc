@@ -1,0 +1,217 @@
+@model string
+
+@{
+    var modelUrl = Model;
+    var viewerId = "model-viewer-" + Guid.NewGuid().ToString("N")[..8];
+}
+
+<div class="model-3d-container">
+    <model-viewer id="@viewerId"
+                  src="@modelUrl"
+                  alt="3D Model"
+                  auto-rotate
+                  camera-controls
+                  interaction-prompt="auto"
+                  loading="lazy"
+                  ar
+                  ar-modes="webxr scene-viewer quick-look"
+                  style="width: 100%; height: 100%; max-height: 100%; background-color: #f8f9fa; display: block;">
+
+        <!-- Loading placeholder -->
+        <div slot="poster" class="d-flex align-items-center justify-content-center h-100">
+            <div class="text-center">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Đang tải mô hình 3D...</span>
+                </div>
+                <div class="mt-2 text-muted">Đang tải mô hình 3D...</div>
+                <small class="text-muted d-block mt-1" id="progress-@viewerId">Đang khởi tạo...</small>
+            </div>
+        </div>
+
+        <!-- Error fallback -->
+        <div slot="error" class="d-flex align-items-center justify-content-center h-100">
+            <div class="text-center text-danger">
+                <i class="fas fa-exclamation-triangle fa-3x mb-3"></i>
+                <div>Không thể tải mô hình 3D</div>
+                <small class="text-muted d-block">Có thể do file bị lỗi hoặc URL không hợp lệ</small>
+                <div class="mt-3">
+                    <a href="@modelUrl" target="_blank" class="btn btn-sm btn-outline-primary">
+                        <i class="fas fa-external-link-alt"></i> Kiểm tra file
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Controls -->
+        <div class="model-controls position-absolute" style="bottom: 10px; left: 10px; z-index: 10;">
+            <div class="btn-group" role="group">
+                <button type="button" class="btn btn-sm btn-light" onclick="resetCamera('@viewerId')" title="Reset góc nhìn">
+                    <i class="fas fa-home"></i>
+                </button>
+                <button type="button" class="btn btn-sm btn-light" onclick="toggleAutoRotate('@viewerId')" title="Bật/tắt xoay tự động">
+                    <i class="fas fa-sync-alt"></i>
+                </button>
+                <button type="button" class="btn btn-sm btn-light" onclick="toggleFullscreen('@viewerId')" title="Toàn màn hình">
+                    <i class="fas fa-expand"></i>
+                </button>
+            </div>
+        </div>
+    </model-viewer>
+</div>
+
+<style>
+    .model-3d-container {
+        position: relative;
+        width: 100%;
+        height: 100%;
+        border-radius: 0;
+        overflow: hidden;
+        background: #f8f9fa;
+        /* Đảm bảo không có margin/padding gây overflow */
+        margin: 0;
+        padding: 0;
+        /* Đảm bảo container không tràn */
+        box-sizing: border-box;
+    }
+
+    model-viewer {
+        --poster-color: transparent;
+        --progress-bar-color: #007bff;
+        --progress-mask: #ffffff;
+        /* Đảm bảo model viewer không tràn ra ngoài */
+        position: relative;
+        overflow: hidden;
+        border-radius: 0;
+        /* Fix cho Chrome/Safari */
+        transform: translateZ(0);
+        -webkit-transform: translateZ(0);
+    }
+
+    .model-controls {
+        opacity: 0;
+        transition: opacity 0.3s ease;
+        /* Đảm bảo controls không tràn ra ngoài */
+        max-width: calc(100% - 20px);
+    }
+
+    .model-3d-container:hover .model-controls {
+        opacity: 1;
+    }
+
+    /* Responsive controls cho mobile */
+    @@media (max-width: 768px) {
+        .model-controls
+
+    {
+        opacity: 1; /* Always show on mobile */
+        bottom: 5px;
+        left: 5px;
+    }
+
+    .model-controls .btn-group .btn {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.75rem;
+    }
+
+    }
+
+    /* Fix cho một số trình duyệt có thể render sai */
+    @@supports (-webkit-appearance: none) {
+        model-viewer
+
+    {
+        /* Safari specific fixes */
+        isolation: isolate;
+    }
+
+    }</style>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const modelViewer = document.getElementById('@viewerId');
+        const progressElement = document.getElementById('progress-@viewerId');
+
+        if (modelViewer) {
+            console.log('🔧 Model Viewer initialized for:', '@modelUrl');
+
+            if (progressElement) progressElement.textContent = 'Đang tải mô hình...';
+
+            modelViewer.addEventListener('load', function() {
+                console.log('✅ Model loaded successfully!');
+                if (progressElement) progressElement.textContent = 'Tải thành công!';
+            });
+
+            modelViewer.addEventListener('error', function(e) {
+                console.error('❌ Model failed to load:', e);
+                if (progressElement) progressElement.textContent = 'Lỗi tải mô hình!';
+            });
+
+            modelViewer.addEventListener('progress', function(e) {
+                const progress = Math.round(e.detail.totalProgress * 100);
+                console.log('📊 Loading progress:', progress + '%');
+                if (progressElement) progressElement.textContent = `Đã tải: ${progress}%`;
+            });
+
+            // Đảm bảo model viewer fit đúng trong container
+            const container = modelViewer.closest('.model-3d-container');
+            if (container) {
+                const resizeObserver = new ResizeObserver(entries => {
+                    for (let entry of entries) {
+                        // Force model viewer to respect container bounds
+                        modelViewer.style.width = '100%';
+                        modelViewer.style.height = '100%';
+                    }
+                });
+                resizeObserver.observe(container);
+            }
+        }
+    });
+
+    function resetCamera(viewerId) {
+        const modelViewer = document.getElementById(viewerId);
+        if (modelViewer && modelViewer.loaded) {
+            try {
+                modelViewer.cameraOrbit = 'auto auto auto';
+                modelViewer.cameraTarget = 'auto auto auto';
+                console.log('📷 Camera reset');
+            } catch (error) {
+                console.warn('⚠️ Camera reset failed:', error);
+            }
+        }
+    }
+
+    function toggleAutoRotate(viewerId) {
+        const modelViewer = document.getElementById(viewerId);
+        if (modelViewer) {
+            try {
+                modelViewer.autoRotate = !modelViewer.autoRotate;
+                const button = event.target.closest('button');
+                if (modelViewer.autoRotate) {
+                    button.classList.add('active');
+                    button.style.backgroundColor = '#0d6efd';
+                    button.style.color = 'white';
+                } else {
+                    button.classList.remove('active');
+                    button.style.backgroundColor = '';
+                    button.style.color = '';
+                }
+                console.log('🔄 Auto rotate:', modelViewer.autoRotate);
+            } catch (error) {
+                console.warn('⚠️ Auto rotate failed:', error);
+            }
+        }
+    }
+
+    function toggleFullscreen(viewerId) {
+        try {
+            const container = document.getElementById(viewerId).closest('.card');
+            if (!document.fullscreenElement) {
+                container.requestFullscreen();
+            } else {
+                document.exitFullscreen();
+            }
+        } catch (error) {
+            console.warn('⚠️ Fullscreen not supported:', error);
+        }
+    }
+</script>

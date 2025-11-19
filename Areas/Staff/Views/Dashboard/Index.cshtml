@@ -1,0 +1,169 @@
+@{
+    ViewData["Title"] = "Dashboard - Nhân viên";
+    var staffName = ViewBag.StaffName as string ?? "Nhân viên";
+    var totalCars = (int)(ViewBag.TotalCars ?? 0);
+    var totalRentals = (int)(ViewBag.TotalRentals ?? 0);
+    var activeRentals = (int)(ViewBag.ActiveRentals ?? 0);
+    var totalPayments = (decimal)(ViewBag.TotalPayments ?? 0);
+    var recentRentals = ViewBag.RecentRentals as List<carrentalmvc.Models.Rental> ?? new List<carrentalmvc.Models.Rental>();
+}
+
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-1">Dashboard Nhân viên</h1>
+            <p class="text-muted mb-0">Xin chào, <strong>@staffName</strong>!</p>
+        </div>
+        <div class="text-muted">
+            <i class="fas fa-calendar me-2"></i>@DateTime.Now.ToString("dddd, dd/MM/yyyy")
+        </div>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="row mb-4">
+        <!-- Total Cars -->
+        <div class="col-xl-4 col-md-6 mb-4">
+            <div class="card border-left-primary shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                                Tổng số xe
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">@totalCars</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-car fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Active Rentals -->
+        <div class="col-xl-4 col-md-6 mb-4">
+            <div class="card border-left-success shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                                Đơn thuê đang hoạt động
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">@activeRentals / @totalRentals</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-file-contract fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Total Revenue -->
+        <div class="col-xl-4 col-md-6 mb-4">
+            <div class="card border-left-info shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                                Tổng thanh toán
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">@totalPayments.ToString("N0") VNĐ</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-dollar-sign fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Rentals -->
+    <div class="card shadow mb-4">
+        <div class="card-header py-3 d-flex justify-content-between align-items-center">
+            <h6 class="m-0 font-weight-bold text-primary">Đơn thuê xe gần đây</h6>
+            <a asp-area="Staff" asp-controller="Rentals" asp-action="Index" class="btn btn-sm btn-primary">
+                <i class="fas fa-list me-1"></i>Xem tất cả
+            </a>
+        </div>
+        <div class="card-body">
+            @if (recentRentals.Any())
+            {
+                <div class="table-responsive">
+                    <table class="table table-bordered table-hover">
+                        <thead>
+                            <tr>
+                                <th>Mã đơn</th>
+                                <th>Xe</th>
+                                <th>Khách hàng</th>
+                                <th>Ngày thuê</th>
+                                <th>Ngày trả</th>
+                                <th>Trạng thái</th>
+                                <th>Thao tác</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var rental in recentRentals)
+                            {
+                                <tr>
+                                    <td><strong>#@rental.RentalId</strong></td>
+                                    <td>@rental.Car?.Name</td>
+                                    <td>@rental.Renter?.FullName</td>
+                                    <td>@rental.StartDate.ToString("dd/MM/yyyy HH:mm")</td>
+                                    <td>@rental.EndDate.ToString("dd/MM/yyyy HH:mm")</td>
+                                    <td>
+                                        @switch (rental.Status)
+                                        {
+                                            case carrentalmvc.Models.Enums.RentalStatus.Pending:
+                                                <span class="badge bg-warning">Chờ xác nhận</span>
+                                                break;
+                                            case carrentalmvc.Models.Enums.RentalStatus.Confirmed:
+                                                <span class="badge bg-info">Đã xác nhận</span>
+                                                break;
+                                            case carrentalmvc.Models.Enums.RentalStatus.Active:
+                                                <span class="badge bg-success">Đang hoạt động</span>
+                                                break;
+                                            case carrentalmvc.Models.Enums.RentalStatus.Completed:
+                                                <span class="badge bg-secondary">Hoàn thành</span>
+                                                break;
+                                            case carrentalmvc.Models.Enums.RentalStatus.Cancelled:
+                                                <span class="badge bg-danger">Đã hủy</span>
+                                                break;
+                                        }
+                                    </td>
+                                    <td>
+                                        <a asp-area="Staff" asp-controller="Rentals" asp-action="Details" asp-route-id="@rental.RentalId" 
+                                           class="btn btn-sm btn-info">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+            else
+            {
+                <p class="text-center text-muted py-4">Chưa có đơn thuê nào</p>
+            }
+        </div>
+    </div>
+</div>
+
+<style>
+    .border-left-primary {
+        border-left: 0.25rem solid #4e73df !important;
+    }
+    .border-left-success {
+        border-left: 0.25rem solid #1cc88a !important;
+    }
+    .border-left-info {
+        border-left: 0.25rem solid #36b9cc !important;
+    }
+    .border-left-warning {
+        border-left: 0.25rem solid #f6c23e !important;
+    }
+</style>

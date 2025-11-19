@@ -1,0 +1,227 @@
+@model IEnumerable<CarOwnerRequest>
+@{
+    ViewData["Title"] = "Trạng thái yêu cầu làm chủ xe";
+}
+
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h3 class="mb-0">
+                        <i class="fas fa-clipboard-list me-2"></i>
+                        Yêu cầu trở thành chủ xe của tôi
+                    </h3>
+                </div>
+                <div class="card-body">
+                    @if (!Model.Any())
+                    {
+                        <!-- No requests yet -->
+                        <div class="text-center py-5">
+                            <i class="fas fa-inbox fa-4x text-muted mb-3"></i>
+                            <h4 class="text-muted">Bạn chưa có yêu cầu nào</h4>
+                            <p class="text-muted mb-4">Gửi yêu cầu để trở thành chủ xe và bắt đầu kiếm thêm thu nhập</p>
+                            <a asp-action="Create" class="btn btn-primary btn-lg">
+                                <i class="fas fa-plus-circle me-2"></i>
+                                Đăng ký trở thành chủ xe
+                            </a>
+                        </div>
+                    }
+                    else
+                    {
+                        <!-- Requests list -->
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Ngày gửi</th>
+                                        <th>Thông tin</th>
+                                        <th>Số xe</th>
+                                        <th>Trạng thái</th>
+                                        <th>Chi tiết</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var request in Model)
+                                    {
+                                        <tr>
+                                            <td>
+                                                <small>
+                                                    <i class="fas fa-calendar"></i>
+                                                    @request.RequestedAt.ToString("dd/MM/yyyy HH:mm")
+                                                </small>
+                                            </td>
+                                            <td>
+                                                <strong>@request.FullName</strong><br/>
+                                                <small class="text-muted">
+                                                    <i class="fas fa-envelope"></i> @request.Email<br/>
+                                                    <i class="fas fa-phone"></i> @request.PhoneNumber
+                                                </small>
+                                            </td>
+                                            <td>
+                                                <span class="badge bg-info">
+                                                    @request.ExpectedCarCount xe
+                                                </span>
+                                            </td>
+                                            <td>
+                                                @switch (request.Status)
+                                                {
+                                                    case CarOwnerRequestStatus.Pending:
+                                                        <span class="badge bg-warning text-dark">
+                                                            <i class="fas fa-clock"></i> Chờ duyệt
+                                                        </span>
+                                                        break;
+                                                    case CarOwnerRequestStatus.Approved:
+                                                        <span class="badge bg-success">
+                                                            <i class="fas fa-check-circle"></i> Đã duyệt
+                                                        </span>
+                                                        if (request.ProcessedAt.HasValue)
+                                                        {
+                                                            <br/>
+                                                            <small class="text-muted">
+                                                                @request.ProcessedAt.Value.ToString("dd/MM/yyyy")
+                                                            </small>
+                                                        }
+                                                        break;
+                                                    case CarOwnerRequestStatus.Rejected:
+                                                        <span class="badge bg-danger">
+                                                            <i class="fas fa-times-circle"></i> Từ chối
+                                                        </span>
+                                                        break;
+                                                }
+                                            </td>
+                                            <td>
+                                                <button type="button" class="btn btn-sm btn-outline-primary" 
+                                                        data-bs-toggle="modal" data-bs-target="#detailModal@(request.CarOwnerRequestId)">
+                                                    <i class="fas fa-eye"></i> Xem
+                                                </button>
+                                            </td>
+                                        </tr>
+
+                                        <!-- Detail Modal -->
+                                        <div class="modal fade" id="detailModal@(request.CarOwnerRequestId)" tabindex="-1">
+                                            <div class="modal-dialog modal-lg">
+                                                <div class="modal-content">
+                                                    <div class="modal-header bg-primary text-white">
+                                                        <h5 class="modal-title">Chi tiết yêu cầu</h5>
+                                                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                                                    </div>
+                                                    <div class="modal-body">
+                                                        <div class="row mb-3">
+                                                            <div class="col-md-6">
+                                                                <h6 class="text-primary">Thông tin cá nhân</h6>
+                                                                <dl class="row">
+                                                                    <dt class="col-sm-4">Họ tên:</dt>
+                                                                    <dd class="col-sm-8">@request.FullName</dd>
+                                                                    
+                                                                    <dt class="col-sm-4">Email:</dt>
+                                                                    <dd class="col-sm-8">@request.Email</dd>
+                                                                    
+                                                                    <dt class="col-sm-4">Điện thoại:</dt>
+                                                                    <dd class="col-sm-8">@request.PhoneNumber</dd>
+                                                                    
+                                                                    <dt class="col-sm-4">CCCD/CMND:</dt>
+                                                                    <dd class="col-sm-8">@request.NationalId</dd>
+                                                                    
+                                                                    <dt class="col-sm-4">Địa chỉ:</dt>
+                                                                    <dd class="col-sm-8">@request.Address</dd>
+                                                                </dl>
+                                                            </div>
+                                                            <div class="col-md-6">
+                                                                <h6 class="text-primary">Thông tin cho thuê</h6>
+                                                                <dl class="row">
+                                                                    <dt class="col-sm-5">Số xe dự kiến:</dt>
+                                                                    <dd class="col-sm-7">@request.ExpectedCarCount xe</dd>
+                                                                    
+                                                                    <dt class="col-sm-5">Ngày gửi:</dt>
+                                                                    <dd class="col-sm-7">@request.RequestedAt.ToString("dd/MM/yyyy HH:mm")</dd>
+                                                                    
+                                                                    <dt class="col-sm-5">Trạng thái:</dt>
+                                                                    <dd class="col-sm-7">
+                                                                        @switch (request.Status)
+                                                                        {
+                                                                            case CarOwnerRequestStatus.Pending:
+                                                                                <span class="badge bg-warning text-dark">Chờ duyệt</span>
+                                                                                break;
+                                                                            case CarOwnerRequestStatus.Approved:
+                                                                                <span class="badge bg-success">Đã duyệt</span>
+                                                                                break;
+                                                                            case CarOwnerRequestStatus.Rejected:
+                                                                                <span class="badge bg-danger">Từ chối</span>
+                                                                                break;
+                                                                        }
+                                                                    </dd>
+                                                                </dl>
+                                                            </div>
+                                                        </div>
+
+                                                        @if (!string.IsNullOrEmpty(request.Experience))
+                                                        {
+                                                            <div class="mb-3">
+                                                                <h6 class="text-primary">Kinh nghiệm</h6>
+                                                                <p class="mb-0">@request.Experience</p>
+                                                            </div>
+                                                        }
+
+                                                        @if (!string.IsNullOrEmpty(request.Notes))
+                                                        {
+                                                            <div class="mb-3">
+                                                                <h6 class="text-primary">Ghi chú</h6>
+                                                                <p class="mb-0">@request.Notes</p>
+                                                            </div>
+                                                        }
+
+                                                        @if (request.Status == CarOwnerRequestStatus.Rejected && !string.IsNullOrEmpty(request.RejectionReason))
+                                                        {
+                                                            <div class="alert alert-danger">
+                                                                <h6 class="alert-heading">
+                                                                    <i class="fas fa-exclamation-triangle"></i> Lý do từ chối
+                                                                </h6>
+                                                                <p class="mb-0">@request.RejectionReason</p>
+                                                            </div>
+                                                        }
+
+                                                        @if (request.Status == CarOwnerRequestStatus.Approved)
+                                                        {
+                                                            <div class="alert alert-success">
+                                                                <h6 class="alert-heading">
+                                                                    <i class="fas fa-check-circle"></i> Đã được duyệt!
+                                                                </h6>
+                                                                <p class="mb-0">
+                                                                    Yêu cầu của bạn đã được duyệt vào ngày @request.ProcessedAt?.ToString("dd/MM/yyyy").
+                                                                    Bạn có thể bắt đầu thêm xe và cho thuê ngay!
+                                                                </p>
+                                                                <hr>
+                                                                <a asp-area="CarOwner" asp-controller="Dashboard" asp-action="Index" class="btn btn-success">
+                                                                    <i class="fas fa-tachometer-alt"></i> Đến Dashboard Chủ xe
+                                                                </a>
+                                                            </div>
+                                                        }
+                                                    </div>
+                                                    <div class="modal-footer">
+                                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- Add new request button if no pending request -->
+                        @if (!Model.Any(r => r.Status == CarOwnerRequestStatus.Pending))
+                        {
+                            <div class="text-center mt-4">
+                                <a asp-action="Create" class="btn btn-primary">
+                                    <i class="fas fa-plus-circle me-2"></i>
+                                    Gửi yêu cầu mới
+                                </a>
+                            </div>
+                        }
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,1293 @@
+﻿
+@using carrentalmvc.Models
+@using carrentalmvc.Models.Enums
+@model Car
+@{
+    ViewData["Title"] = "Thêm xe mới";
+
+    // Get data from ViewBag
+    var brands = ViewBag.Brands as SelectList;
+    var categories = ViewBag.Categories as SelectList;
+    var features = ViewBag.Features as IEnumerable<Feature> ?? new List<Feature>();
+    var templates3D = ViewBag.Templates3D as IEnumerable<Model3DTemplate> ?? new List<Model3DTemplate>();
+}
+
+<div class="container-fluid py-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h3 class="mb-0">
+                        <i class="fas fa-car-plus me-2"></i>Thêm xe mới
+                    </h3>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <strong>Lưu ý:</strong> Xe sau khi thêm sẽ ở trạng thái "Chờ duyệt" và cần được Admin phê duyệt trước khi có thể cho thuê.
+                    </div>
+                    <!-- Thêm ngay sau div alert info -->
+                    @if (ViewBag.ValidationErrors != null)
+                    {
+                        var errors = ViewBag.ValidationErrors as Dictionary<string, List<string>>;
+                        <div class="alert alert-danger alert-dismissible fade show">
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                            <h5><i class="fas fa-exclamation-triangle me-2"></i>Lỗi Validation</h5>
+                            <ul class="mb-0">
+                                @foreach (var error in errors)
+                                {
+                                    <li>
+                                        <strong>@error.Key:</strong>
+                                        <ul>
+                                            @foreach (var msg in error.Value)
+                                            {
+                                                <li>@msg</li>
+                                            }
+                                        </ul>
+                                    </li>
+                                }
+                            </ul>
+                        </div>
+                    }
+
+                    <!-- Hiển thị ModelState errors -->
+                    <div asp-validation-summary="All" class="alert alert-danger"></div>
+                    <form asp-action="Create" method="post" enctype="multipart/form-data" id="createCarForm">
+                        <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+
+                        <!-- THÔNG TIN CƠ BẢN -->
+                        <div class="card mb-4">
+                            <div class="card-header bg-light">
+                                <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>Thông tin cơ bản</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="form-group mb-3">
+                                            <label asp-for="Name" class="form-label"></label>
+                                            <input asp-for="Name" class="form-control" placeholder="VD: Toyota Vios 2024" />
+                                            <span asp-validation-for="Name" class="text-danger"></span>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-group mb-3">
+                                            <label asp-for="LicensePlate" class="form-label"></label>
+                                            <input asp-for="LicensePlate" class="form-control" placeholder="VD: 30A-12345" />
+                                            <span asp-validation-for="LicensePlate" class="text-danger"></span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-md-4">
+                                        <div class="form-group mb-3">
+                                            <label asp-for="BrandId" class="form-label"></label>
+                                            <select asp-for="BrandId" asp-items="brands" class="form-select" id="brandSelect">
+                                                <option value="">-- Chọn thương hiệu --</option>
+                                            </select>
+                                            <span asp-validation-for="BrandId" class="text-danger"></span>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="form-group mb-3">
+                                            <label asp-for="CategoryId" class="form-label"></label>
+                                            <select asp-for="CategoryId" asp-items="categories" class="form-select" id="categorySelect">
+                                                <option value="">-- Chọn loại xe --</option>
+                                            </select>
+                                            <span asp-validation-for="CategoryId" class="text-danger"></span>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="form-group mb-3">
+                                            <label asp-for="Year" class="form-label"></label>
+                                            <input asp-for="Year" type="number" class="form-control" placeholder="2024" />
+                                            <span asp-validation-for="Year" class="text-danger"></span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="form-group mb-3">
+                                    <label asp-for="Description" class="form-label"></label>
+                                    <textarea asp-for="Description" class="form-control" rows="4" placeholder="Mô tả chi tiết về xe..."></textarea>
+                                    <span asp-validation-for="Description" class="text-danger"></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- THÔNG SỐ KỸ THUẬT -->
+                        <div class="card mb-4">
+                            <div class="card-header bg-light">
+                                <h5 class="mb-0"><i class="fas fa-cog me-2"></i>Thông số kỹ thuật</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-3">
+                                        <div class="form-group mb-3">
+                                            <label asp-for="Seats" class="form-label"></label>
+                                            <input asp-for="Seats" type="number" class="form-control" placeholder="5" />
+                                            <span asp-validation-for="Seats" class="text-danger"></span>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="form-group mb-3">
+                                            <label asp-for="Color" class="form-label"></label>
+                                            <input asp-for="Color" class="form-control" placeholder="Trắng" />
+                                            <span asp-validation-for="Color" class="text-danger"></span>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="form-group mb-3">
+                                            <label asp-for="Transmission" class="form-label"></label>
+                                            <select asp-for="Transmission" class="form-select">
+                                                <option value="">-- Chọn hộp số --</option>
+                                                <option value="@Transmission.Manual">Số sàn</option>
+                                                <option value="@Transmission.Automatic">Số tự động</option>
+                                                <option value="@Transmission.CVT">CVT</option>
+                                            </select>
+                                            <span asp-validation-for="Transmission" class="text-danger"></span>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="form-group mb-3">
+                                            <label asp-for="FuelType" class="form-label"></label>
+                                            <select asp-for="FuelType" class="form-select">
+                                                <option value="">-- Chọn nhiên liệu --</option>
+                                                <option value="@FuelType.Gasoline">Xăng</option>
+                                                <option value="@FuelType.Diesel">Dầu</option>
+                                                <option value="@FuelType.Hybrid">Hybrid</option>
+                                                <option value="@FuelType.Electric">Điện</option>
+                                            </select>
+                                            <span asp-validation-for="FuelType" class="text-danger"></span>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="row">
+                                    <div class="col-md-4">
+                                        <div class="form-group mb-3">
+                                            <label asp-for="FuelConsumption" class="form-label"></label>
+                                            <div class="input-group">
+                                                <input asp-for="FuelConsumption" type="number" step="0.1" class="form-control" placeholder="6.5" />
+                                                <span class="input-group-text">L/100km</span>
+                                            </div>
+                                            <span asp-validation-for="FuelConsumption" class="text-danger"></span>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="form-group mb-3">
+                                            <label asp-for="PricePerDay" class="form-label"></label>
+                                            <div class="input-group">
+                                                <input asp-for="PricePerDay" type="number" class="form-control" placeholder="500000" />
+                                                <span class="input-group-text">VNĐ</span>
+                                            </div>
+                                            <span asp-validation-for="PricePerDay" class="text-danger"></span>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="form-group mb-3">
+                                            <label asp-for="PricePerHour" class="form-label"></label>
+                                            <div class="input-group">
+                                                <input asp-for="PricePerHour" type="number" class="form-control" placeholder="50000" />
+                                                <span class="input-group-text">VNĐ</span>
+                                            </div>
+                                            <span asp-validation-for="PricePerHour" class="text-danger"></span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- CẤU HÌNH GIAO XE -->
+                        <div class="card mb-4">
+                            <div class="card-header bg-light">
+                                <h5 class="mb-0"><i class="fas fa-shipping-fast me-2"></i>Cấu hình giao xe</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="alert alert-info">
+                                    <i class="fas fa-info-circle me-2"></i>
+                                    <strong>Lưu ý:</strong> Thiết lập khoảng cách giao xe tối đa và chi phí giao xe để khách hàng biết phạm vi phục vụ của bạn.
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="form-group mb-3">
+                                            <label asp-for="MaxDeliveryDistance" class="form-label"></label>
+                                            <div class="input-group">
+                                                <input asp-for="MaxDeliveryDistance" type="number" class="form-control"
+                                                       placeholder="VD: 50" min="0" max="500" />
+                                                <span class="input-group-text">km</span>
+                                            </div>
+                                            <span asp-validation-for="MaxDeliveryDistance" class="text-danger"></span>
+                                            <div class="form-text">
+                                                <i class="fas fa-question-circle me-1"></i>
+                                                Khoảng cách tối đa bạn sẵn sàng giao xe tính từ vị trí xe (0 = không giao xe)
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-group mb-3">
+                                            <label asp-for="PricePerKmDelivery" class="form-label"></label>
+                                            <div class="input-group">
+                                                <input asp-for="PricePerKmDelivery" type="number" class="form-control"
+                                                       placeholder="VD: 5000" min="0" max="100000" step="1000" />
+                                                <span class="input-group-text">VNĐ/km</span>
+                                            </div>
+                                            <span asp-validation-for="PricePerKmDelivery" class="text-danger"></span>
+                                            <div class="form-text">
+                                                <i class="fas fa-question-circle me-1"></i>
+                                                Chi phí giao xe cho mỗi km (0 = miễn phí giao xe)
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Preview ước tính chi phí -->
+                                <div class="mt-3" id="deliveryPreview" style="display: none;">
+                                    <div class="card bg-light">
+                                        <div class="card-body">
+                                            <h6 class="card-title"><i class="fas fa-calculator me-2"></i>Ước tính chi phí giao xe:</h6>
+                                            <div class="row text-center">
+                                                <div class="col-md-4">
+                                                    <div class="border-end">
+                                                        <small class="text-muted">10 km</small>
+                                                        <div class="fw-bold text-primary" id="delivery10km">0 VNĐ</div>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-4">
+                                                    <div class="border-end">
+                                                        <small class="text-muted">25 km</small>
+                                                        <div class="fw-bold text-primary" id="delivery25km">0 VNĐ</div>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-4">
+                                                    <small class="text-muted">50 km</small>
+                                                    <div class="fw-bold text-primary" id="delivery50km">0 VNĐ</div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- HÌNH ẢNH XE -->
+                        <div class="card mb-4">
+                            <div class="card-header bg-warning text-dark">
+                                <h5 class="mb-0"><i class="fas fa-images me-2"></i>Hình ảnh xe</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="alert alert-info">
+                                    <i class="fas fa-info-circle me-2"></i>
+                                    <strong>Lưu ý:</strong> Hãy tải lên ít nhất 3 hình ảnh chất lượng cao của xe.
+                                    Ảnh đầu tiên sẽ được đặt làm ảnh chính.
+                                </div>
+
+                                <!-- Image Upload Area -->
+                                <div class="mb-4">
+                                    <label class="form-label">Chọn hình ảnh:</label>
+                                    <div class="image-upload-area" id="imageUploadArea">
+                                        <div class="upload-box" id="uploadBox">
+                                            <i class="fas fa-cloud-upload-alt fa-3x text-muted mb-3"></i>
+                                            <p class="text-muted mb-2">Kéo thả hình ảnh vào đây hoặc</p>
+                                            <button type="button" class="btn btn-outline-primary" id="selectImagesBtn">
+                                                <i class="fas fa-folder-open me-2"></i>Chọn hình ảnh
+                                            </button>
+                                            <input type="file" id="primaryImage" name="primaryImage" accept="image/*" style="display: none;" />
+                                            <input type="file" id="additionalImages" name="additionalImages" multiple accept="image/*" style="display: none;" />
+                                            <div class="mt-2">
+                                                <small class="text-muted">
+                                                    Hỗ trợ: JPG, PNG, GIF. Tối đa 10 ảnh, mỗi ảnh không quá 5MB.
+                                                </small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Image Preview Area -->
+                                <div id="imagePreviewArea" style="display: none;">
+                                    <label class="form-label">Hình ảnh đã chọn:</label>
+                                    <div class="row" id="imagePreviewContainer">
+                                        <!-- Image previews will be added here dynamically -->
+                                    </div>
+                                    <div class="mt-3">
+                                        <button type="button" class="btn btn-outline-secondary" id="clearImagesBtn">
+                                            <i class="fas fa-trash me-2"></i>Xóa tất cả ảnh
+                                        </button>
+                                        <button type="button" class="btn btn-outline-primary" id="addMoreImagesBtn">
+                                            <i class="fas fa-plus me-2"></i>Thêm ảnh khác
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- MÔ HÌNH 3D -->
+                        <div class="card mb-4">
+                            <div class="card-header bg-info text-white">
+                                <h5 class="mb-0"><i class="fas fa-cube me-2"></i>Mô hình 3D (tùy chọn)</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="alert alert-info">
+                                    <i class="fas fa-info-circle me-2"></i>
+                                    <strong>Lưu ý:</strong> Mô hình 3D giúp khách hàng xem xe một cách sinh động và chi tiết hơn.
+                                    Bạn có thể chọn từ thư viện có sẵn hoặc nhập URL mô hình tùy chỉnh.
+                                </div>
+
+                                <!-- Filter for templates -->
+                                <div class="mb-3">
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <label class="form-label">Lọc theo thương hiệu:</label>
+                                            <select class="form-select" id="templateBrandFilter">
+                                                <option value="">Tất cả thương hiệu</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label">Lọc theo loại xe:</label>
+                                            <select class="form-select" id="templateCategoryFilter">
+                                                <option value="">Tất cả loại xe</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Template Selection -->
+                                <div class="mb-4">
+                                    <label class="form-label">Chọn mô hình từ thư viện:</label>
+                                    <div class="row" id="template3DGrid">
+                                        @if (templates3D.Any())
+                                        {
+                                            @foreach (var template in templates3D)
+                                            {
+                                                var fileFormatText = template.FileFormat.ToString();
+                                                var brandName = template.Brand?.Name ?? "Chung";
+                                                var categoryName = template.Category?.Name ?? "Chung";
+
+                                                <div class="col-md-4 col-lg-3 mb-3 template-item"
+                                                     data-template-id="@template.TemplateId"
+                                                     data-brand-id="@(template.BrandId ?? 0)"
+                                                     data-category-id="@(template.CategoryId ?? 0)"
+                                                     data-brand-name="@brandName"
+                                                     data-category-name="@categoryName">
+                                                    <div class="card template-card">
+                                                        <div class="card-body text-center p-2">
+                                                            @if (!string.IsNullOrEmpty(template.PreviewImageUrl))
+                                                            {
+                                                                <img src="@template.PreviewImageUrl" alt="@template.Name"
+                                                                     class="img-fluid rounded mb-2" style="height: 80px; object-fit: cover;">
+                                                            }
+                                                            else
+                                                            {
+                                                                <div class="bg-light rounded d-flex align-items-center justify-content-center mb-2"
+                                                                     style="height: 80px;">
+                                                                    <i class="fas fa-cube fa-2x text-muted"></i>
+                                                                </div>
+                                                            }
+                                                            <h6 class="card-title small mb-1">@template.Name</h6>
+                                                            <small class="text-muted">@fileFormatText</small>
+                                                            <br>
+                                                            <small class="text-muted">@brandName - @categoryName</small>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            }
+                                        }
+                                        else
+                                        {
+                                            <div class="col-12">
+                                                <div class="text-center py-4 text-muted">
+                                                    <i class="fas fa-cube fa-3x mb-3"></i>
+                                                    <p>Chưa có mô hình 3D nào trong thư viện.</p>
+                                                    <small>Bạn có thể nhập URL mô hình tùy chỉnh bên dưới.</small>
+                                                </div>
+                                            </div>
+                                        }
+                                    </div>
+                                </div>
+
+                                <!-- Hidden input for selected template -->
+                                <input type="hidden" name="model3DTemplateId" id="selectedTemplateId" />
+
+                                <!-- Custom Model URL -->
+                                <div class="row">
+                                    <div class="col-md-8">
+                                        <div class="form-group mb-3">
+                                            <label for="customModel3DUrl" class="form-label">URL mô hình 3D tùy chỉnh</label>
+                                            <input type="text" name="customModel3DUrl" class="form-control" id="customModelUrl"
+                                                   placeholder="https://example.com/models/my-car.glb" />
+                                            <div class="form-text">
+                                                Nhập URL mô hình 3D tùy chỉnh nếu không chọn từ thư viện.
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="form-group mb-3">
+                                            <label for="model3DFileFormat" class="form-label">Định dạng file</label>
+                                            <select name="model3DFileFormat" class="form-select">
+                                                <option value="">-- Chọn định dạng --</option>
+                                                <option value="@((int)FileFormat.GLB)">GLB</option>
+                                                <option value="@((int)FileFormat.GLTF)">GLTF</option>
+                                                <option value="@((int)FileFormat.OBJ)">OBJ</option>
+                                                <option value="@((int)FileFormat.FBX)">FBX</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- 3D Preview -->
+                                <div class="mt-3" id="model3DPreview" style="display: none;">
+                                    <label class="form-label">Xem trước mô hình 3D:</label>
+                                    <div class="border rounded p-3 bg-light text-center">
+                                        <div id="model3DViewer" style="height: 300px; background: #f8f9fa; border-radius: 5px; position: relative;">
+                                            <div class="d-flex align-items-center justify-content-center h-100">
+                                                <div class="text-center">
+                                                    <div class="spinner-border text-primary mb-2" role="status" id="loadingSpinner" style="display: none;">
+                                                        <span class="visually-hidden">Loading...</span>
+                                                    </div>
+                                                    <p class="text-muted mb-0" id="previewText">Chọn mô hình để xem trước</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- VỊ TRÍ XE -->
+                        <div class="card mb-4">
+                            <div class="card-header bg-success text-white">
+                                <h5 class="mb-0"><i class="fas fa-map-marked-alt me-2"></i>Vị trí xe đang đỗ</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="alert alert-info">
+                                    <i class="fas fa-info-circle me-2"></i>
+                                    <strong>Lưu ý:</strong> Vị trí xe giúp tính phí giao xe chính xác cho khách hàng.
+                                    Click vào bản đồ hoặc dùng nút "Vị trí hiện tại" để chọn.
+                                </div>
+
+                                <!-- Quick location buttons -->
+                                <div class="mb-3">
+                                    <label class="form-label">Chọn nhanh thành phố:</label>
+                                    <div class="btn-group flex-wrap" role="group">
+                                        <button type="button" class="btn btn-sm btn-outline-primary location-quick-btn" data-lat="21.0285" data-lng="105.8542" data-name="Hà Nội">
+                                            <i class="fas fa-map-marker-alt me-1"></i>Hà Nội
+                                        </button>
+                                        <button type="button" class="btn btn-sm btn-outline-primary location-quick-btn" data-lat="10.8231" data-lng="106.6297" data-name="TP. Hồ Chí Minh">
+                                            <i class="fas fa-map-marker-alt me-1"></i>TP.HCM
+                                        </button>
+                                        <button type="button" class="btn btn-sm btn-outline-primary location-quick-btn" data-lat="16.0471" data-lng="108.2068" data-name="Đà Nẵng">
+                                            <i class="fas fa-map-marker-alt me-1"></i>Đà Nẵng
+                                        </button>
+                                        <button type="button" class="btn btn-sm btn-success" id="getCurrentLocationBtn">
+                                            <i class="fas fa-location-arrow me-1"></i>Vị trí hiện tại
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- Map -->
+                                <div class="mb-3">
+                                    <label class="form-label">Chọn vị trí chính xác trên bản đồ:</label>
+                                    <div id="carLocationMap" style="height: 400px; border: 2px solid #dee2e6; border-radius: 8px;"></div>
+                                    <small class="form-text text-muted">
+                                        <i class="fas fa-hand-pointer me-1"></i>Nhấp vào bản đồ để chọn vị trí xe
+                                    </small>
+                                </div>
+
+                                <!-- Location inputs -->
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="form-group mb-3">
+                                            <label asp-for="Location" class="form-label"></label>
+                                            <input asp-for="Location" class="form-control" placeholder="VD: Bãi đỗ xe Vincom, Garage ABC..." />
+                                            <span asp-validation-for="Location" class="text-danger"></span>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="form-group mb-3">
+                                            <label asp-for="Latitude" class="form-label"></label>
+                                            <input asp-for="Latitude" type="number" step="0.000001" class="form-control" placeholder="21.028511" readonly />
+                                            <span asp-validation-for="Latitude" class="text-danger"></span>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="form-group mb-3">
+                                            <label asp-for="Longitude" class="form-label"></label>
+                                            <input asp-for="Longitude" type="number" step="0.000001" class="form-control" placeholder="105.804817" readonly />
+                                            <span asp-validation-for="Longitude" class="text-danger"></span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- TÍNH NĂNG -->
+                        <div class="card mb-4">
+                            <div class="card-header bg-light">
+                                <h5 class="mb-0"><i class="fas fa-star me-2"></i>Tính năng xe</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    @if (features.Any())
+                                    {
+                                        @foreach (var feature in features)
+                                        {
+                                            <div class="col-md-4 col-lg-3 mb-3">
+                                                <div class="form-check feature-checkbox">
+                                                    <input class="form-check-input" type="checkbox"
+                                                           name="selectedFeatureIds"
+                                                           value="@feature.FeatureId"
+                                                           id="feature_@feature.FeatureId" />
+                                                    <label class="form-check-label" for="feature_@feature.FeatureId">
+                                                        @if (!string.IsNullOrEmpty(feature.Icon))
+                                                        {
+                                                            <i class="@feature.Icon me-2"></i>
+                                                        }
+                                                        @feature.Name
+                                                    </label>
+                                                </div>
+                                            </div>
+                                        }
+                                    }
+                                    else
+                                    {
+                                        <div class="col-12">
+                                            <p class="text-muted">Không có tính năng nào để chọn.</p>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- FORM ACTIONS -->
+                        <div class="d-flex justify-content-between align-items-center mt-4">
+                            <a asp-action="Index" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left me-2"></i>Quay lại
+                            </a>
+                            <button type="submit" class="btn btn-primary btn-lg" id="submitBtn">
+                                <span class="spinner-border spinner-border-sm me-2" role="status" id="submitSpinner" style="display: none;"></span>
+                                <i class="fas fa-save me-2" id="submitIcon"></i>Thêm xe
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Styles {
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
+    <style>
+        .feature-checkbox {
+            padding: 10px;
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+            transition: all 0.3s;
+        }
+
+            .feature-checkbox:hover {
+                background-color: #f8f9fa;
+                border-color: #007bff;
+            }
+
+            .feature-checkbox input:checked ~ label {
+                color: #007bff;
+                font-weight: 600;
+            }
+
+        #carLocationMap {
+            cursor: crosshair;
+        }
+
+        .location-quick-btn {
+            margin: 5px;
+        }
+
+        .btn-group {
+            gap: 5px;
+        }
+
+        #getCurrentLocationBtn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .leaflet-marker-icon {
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
+        }
+
+        .image-upload-area {
+            border: 2px dashed #dee2e6;
+            border-radius: 10px;
+            padding: 30px;
+            text-align: center;
+            transition: all 0.3s;
+            background: #fafafa;
+        }
+
+            .image-upload-area:hover {
+                border-color: #007bff;
+                background: #f0f8ff;
+            }
+
+            .image-upload-area.dragover {
+                border-color: #28a745;
+                background: #f0fff0;
+                transform: scale(1.02);
+            }
+
+        .image-preview-item {
+            position: relative;
+            border: 2px solid transparent;
+            border-radius: 10px;
+            overflow: hidden;
+            transition: all 0.3s;
+        }
+
+            .image-preview-item:hover {
+                border-color: #007bff;
+                transform: translateY(-2px);
+                box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            }
+
+            .image-preview-item.primary {
+                border-color: #28a745;
+                background: #f8fff9;
+            }
+
+            .image-preview-item .remove-image {
+                position: absolute;
+                top: 5px;
+                right: 5px;
+                background: rgba(220, 53, 69, 0.9);
+                color: white;
+                border: none;
+                border-radius: 50%;
+                width: 25px;
+                height: 25px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                opacity: 0;
+                transition: opacity 0.3s;
+            }
+
+            .image-preview-item:hover .remove-image {
+                opacity: 1;
+            }
+
+            .image-preview-item .primary-badge {
+                position: absolute;
+                top: 5px;
+                left: 5px;
+                background: #28a745;
+                color: white;
+                padding: 2px 6px;
+                border-radius: 3px;
+                font-size: 10px;
+                font-weight: bold;
+            }
+
+        .template-card {
+            cursor: pointer;
+            transition: all 0.3s;
+            border: 2px solid transparent;
+            position: relative;
+        }
+
+            .template-card:hover {
+                border-color: #007bff;
+                transform: translateY(-2px);
+                box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            }
+
+            .template-card.selected {
+                border-color: #28a745;
+                background-color: #f8fff9;
+            }
+
+                .template-card.selected::after {
+                    content: '\f00c';
+                    font-family: 'Font Awesome 5 Free';
+                    font-weight: 900;
+                    position: absolute;
+                    top: 5px;
+                    right: 5px;
+                    color: #28a745;
+                    background: white;
+                    border-radius: 50%;
+                    width: 20px;
+                    height: 20px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    font-size: 12px;
+                    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+                }
+
+        .template-item {
+            position: relative;
+            transition: all 0.3s;
+        }
+
+            .template-item.hidden {
+                display: none !important;
+            }
+
+        .form-loading {
+            opacity: 0.7;
+            pointer-events: none;
+        }
+    </style>
+}
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Global variables
+            let primaryImageFile = null;
+            let additionalImageFiles = [];
+            let carMarker = null;
+            let selectedTemplateId = null;
+
+            // Initialize components
+            initializeMap();
+            initializeImageUpload();
+            initialize3DModelSelection();
+            initializeDeliveryConfig();
+            initializeFormSubmission();
+
+                    // ===== MAP FUNCTIONALITY =====
+        function initializeMap() {
+            const vietnamCenter = [16.0471, 108.2068];
+            const carLocationMap = L.map('carLocationMap').setView(vietnamCenter, 6);
+
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap',
+                maxZoom: 18
+            }).addTo(carLocationMap);
+
+            carLocationMap.on('click', function(e) {
+                setCarLocation(e.latlng.lat, e.latlng.lng);
+                reverseGeocode(e.latlng.lat, e.latlng.lng); // ✅ Gọi để cập nhật địa chỉ
+            });
+
+            function setCarLocation(lat, lng) {
+                if (carMarker) {
+                    carLocationMap.removeLayer(carMarker);
+                }
+
+                const redIcon = L.icon({
+                    iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
+                    shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+                    iconSize: [25, 41],
+                    iconAnchor: [12, 41],
+                    popupAnchor: [1, -34],
+                    shadowSize: [41, 41]
+                });
+
+                carMarker = L.marker([lat, lng], { icon: redIcon })
+                    .addTo(carLocationMap)
+                    .bindPopup('<b>Vị trí xe</b><br>' + lat.toFixed(6) + ', ' + lng.toFixed(6))
+                    .openPopup();
+
+                carLocationMap.setView([lat, lng], 15);
+
+                document.querySelector('input[name="Latitude"]').value = lat.toFixed(6);
+                document.querySelector('input[name="Longitude"]').value = lng.toFixed(6);
+            }
+
+            // ✅ SỬA LẠI HÀM NÀY - AWAIT VÀ CẬP NHẬT INPUT
+            async function reverseGeocode(lat, lng) {
+                const locationInput = document.querySelector('input[name="Location"]');
+
+                try {
+                    console.log('🔍 Fetching address for:', lat, lng);
+
+                    // Hiển thị loading
+                    locationInput.value = 'Đang tải địa chỉ...';
+
+                    const response = await fetch(`/api/geocoding/reverse?lat=${lat}&lng=${lng}`);
+
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}`);
+                    }
+
+                    const data = await response.json();
+                    const address = data.display_name || `Vị trí ${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+
+                    // ✅ CẬP NHẬT VÀO Ô INPUT
+                    locationInput.value = address;
+                    console.log('✅ Address updated:', address);
+
+                    return address;
+                } catch (error) {
+                    console.error('❌ Reverse geocode error:', error);
+
+                    // Fallback: sử dụng tọa độ
+                    const fallbackAddress = `Vị trí ${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+                    locationInput.value = fallbackAddress;
+
+                    return fallbackAddress;
+                }
+            }
+
+            // Quick location buttons
+            document.querySelectorAll('.location-quick-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const lat = parseFloat(this.dataset.lat);
+                    const lng = parseFloat(this.dataset.lng);
+                    const name = this.dataset.name;
+
+                    setCarLocation(lat, lng);
+
+                    // ✅ SET TÊN THÀNH PHỐ TRỰC TIẾP
+                    document.querySelector('input[name="Location"]').value = name;
+
+                    // Update active button
+                    document.querySelectorAll('.location-quick-btn').forEach(b => {
+                        b.classList.remove('btn-primary');
+                        b.classList.add('btn-outline-primary');
+                    });
+                    this.classList.remove('btn-outline-primary');
+                    this.classList.add('btn-primary');
+                });
+            });
+
+            // ✅ SỬA LẠI "VỊ TRÍ HIỆN TẠI" BUTTON - THÊM AWAIT
+            document.getElementById('getCurrentLocationBtn').addEventListener('click', function() {
+                if (!navigator.geolocation) {
+                    showToast('error', 'Trình duyệt không hỗ trợ định vị.');
+                    return;
+                }
+
+                const btn = this;
+                const originalHTML = btn.innerHTML;
+                btn.disabled = true;
+                btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Đang lấy...';
+
+                navigator.geolocation.getCurrentPosition(
+                    async function(position) {  // ✅ THÊM ASYNC
+                        const lat = position.coords.latitude;
+                        const lng = position.coords.longitude;
+
+                        console.log('📍 Current location:', lat, lng);
+
+                        setCarLocation(lat, lng);
+
+                        // ✅ AWAIT ĐỂ ĐỢI LẤY ĐỊA CHỈ
+                        await reverseGeocode(lat, lng);
+
+                        btn.disabled = false;
+                        btn.innerHTML = originalHTML;
+                        showToast('success', 'Đã lấy vị trí hiện tại thành công!');
+                    },
+                    function(error) {
+                        btn.disabled = false;
+                        btn.innerHTML = originalHTML;
+
+                        let errorMsg = 'Không thể lấy vị trí: ';
+                        switch(error.code) {
+                            case error.PERMISSION_DENIED:
+                                errorMsg += 'Bạn đã từ chối quyền truy cập vị trí.';
+                                break;
+                            case error.POSITION_UNAVAILABLE:
+                                errorMsg += 'Thông tin vị trí không khả dụng.';
+                                break;
+                            case error.TIMEOUT:
+                                errorMsg += 'Yêu cầu lấy vị trí hết thời gian.';
+                                break;
+                            default:
+                                errorMsg += error.message;
+                        }
+                        showToast('error', errorMsg);
+                    },
+                    {
+                        enableHighAccuracy: true,
+                        timeout: 10000,
+                        maximumAge: 0
+                    }
+                );
+            });
+        }
+
+            // ===== IMAGE UPLOAD FUNCTIONALITY =====
+            function initializeImageUpload() {
+                const uploadArea = document.getElementById('imageUploadArea');
+                const uploadBox = document.getElementById('uploadBox');
+                const primaryImageInput = document.getElementById('primaryImage');
+                const additionalImagesInput = document.getElementById('additionalImages');
+                const selectImagesBtn = document.getElementById('selectImagesBtn');
+                const clearImagesBtn = document.getElementById('clearImagesBtn');
+                const addMoreImagesBtn = document.getElementById('addMoreImagesBtn');
+                const imagePreviewArea = document.getElementById('imagePreviewArea');
+                const imagePreviewContainer = document.getElementById('imagePreviewContainer');
+
+                selectImagesBtn.addEventListener('click', () => primaryImageInput.click());
+                addMoreImagesBtn.addEventListener('click', () => additionalImagesInput.click());
+
+                uploadArea.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    uploadArea.classList.add('dragover');
+                });
+
+                uploadArea.addEventListener('dragleave', (e) => {
+                    e.preventDefault();
+                    uploadArea.classList.remove('dragover');
+                });
+
+                uploadArea.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    uploadArea.classList.remove('dragover');
+                    const files = Array.from(e.dataTransfer.files).filter(file => file.type.startsWith('image/'));
+                    handleImageSelection(files);
+                });
+
+                primaryImageInput.addEventListener('change', (e) => {
+                    if (e.target.files.length > 0) {
+                        primaryImageFile = e.target.files[0];
+                        updateImagePreview();
+                    }
+                });
+
+                additionalImagesInput.addEventListener('change', (e) => {
+                    const files = Array.from(e.target.files);
+                    additionalImageFiles = additionalImageFiles.concat(files);
+                    updateImagePreview();
+                });
+
+                clearImagesBtn.addEventListener('click', () => {
+                    primaryImageFile = null;
+                    additionalImageFiles = [];
+                    primaryImageInput.value = '';
+                    additionalImagesInput.value = '';
+                    updateImagePreview();
+                });
+
+                function handleImageSelection(files) {
+                    if (files.length === 0) return;
+
+                    const maxSize = 5 * 1024 * 1024;
+                    const validFiles = files.filter(file => {
+                        if (!file.type.startsWith('image/')) {
+                            showToast('error', `File ${file.name} không phải là hình ảnh.`);
+                            return false;
+                        }
+                        if (file.size > maxSize) {
+                            showToast('error', `File ${file.name} quá lớn (tối đa 5MB).`);
+                            return false;
+                        }
+                        return true;
+                    });
+
+                    if (validFiles.length === 0) return;
+
+                    if (!primaryImageFile) {
+                        primaryImageFile = validFiles[0];
+                        const dt = new DataTransfer();
+                        dt.items.add(primaryImageFile);
+                        primaryImageInput.files = dt.files;
+                        validFiles.splice(0, 1);
+                    }
+
+                    if (validFiles.length > 0) {
+                        additionalImageFiles = additionalImageFiles.concat(validFiles);
+                        const dt = new DataTransfer();
+                        additionalImageFiles.forEach(f => dt.items.add(f));
+                        additionalImagesInput.files = dt.files;
+                    }
+
+                    updateImagePreview();
+                }
+
+                function updateImagePreview() {
+                    const allFiles = [];
+                    if (primaryImageFile) allFiles.push({ file: primaryImageFile, isPrimary: true });
+                    additionalImageFiles.forEach(f => allFiles.push({ file: f, isPrimary: false }));
+
+                    if (allFiles.length === 0) {
+                        imagePreviewArea.style.display = 'none';
+                        return;
+                    }
+
+                    imagePreviewArea.style.display = 'block';
+                    imagePreviewContainer.innerHTML = '';
+
+                    allFiles.forEach((item, index) => {
+                        const reader = new FileReader();
+                        reader.onload = (e) => {
+                            const col = document.createElement('div');
+                            col.className = 'col-md-3 col-sm-4 col-6 mb-3';
+                            col.innerHTML = `
+                                <div class="image-preview-item ${item.isPrimary ? 'primary' : ''}" data-index="${index}">
+                                    <img src="${e.target.result}" alt="${item.file.name}" class="img-fluid" style="width: 100%; height: 150px; object-fit: cover;">
+                                    <button type="button" class="remove-image" onclick="removeImage(${index}, ${item.isPrimary})">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                    ${item.isPrimary ? '<div class="primary-badge">Ảnh chính</div>' : ''}
+                                </div>
+                            `;
+                            imagePreviewContainer.appendChild(col);
+                        };
+                        reader.readAsDataURL(item.file);
+                    });
+                }
+
+                window.removeImage = function(index, isPrimary) {
+                    if (isPrimary) {
+                        primaryImageFile = null;
+                        primaryImageInput.value = '';
+                    } else {
+                        const adjIndex = primaryImageFile ? index - 1 : index;
+                        additionalImageFiles.splice(adjIndex, 1);
+                        const dt = new DataTransfer();
+                        additionalImageFiles.forEach(f => dt.items.add(f));
+                        additionalImagesInput.files = dt.files;
+                    }
+                    updateImagePreview();
+                };
+            }
+
+            // ===== 3D MODEL SELECTION FUNCTIONALITY =====
+            function initialize3DModelSelection() {
+                const templateCards = document.querySelectorAll('.template-card');
+                const templateItems = document.querySelectorAll('.template-item');
+                const templateIdInput = document.getElementById('selectedTemplateId');
+                const customUrlInput = document.getElementById('customModelUrl');
+                const model3DPreview = document.getElementById('model3DPreview');
+                const previewText = document.getElementById('previewText');
+                const loadingSpinner = document.getElementById('loadingSpinner');
+                const brandFilter = document.getElementById('templateBrandFilter');
+                const categoryFilter = document.getElementById('templateCategoryFilter');
+
+                initializeFilterDropdowns();
+
+                templateCards.forEach(card => {
+                    card.addEventListener('click', function() {
+                        const templateItem = this.closest('.template-item');
+                        const templateId = templateItem.dataset.templateId;
+
+                        templateCards.forEach(c => c.classList.remove('selected'));
+                        this.classList.add('selected');
+
+                        selectedTemplateId = templateId;
+                        templateIdInput.value = templateId;
+                        customUrlInput.value = '';
+
+                        showTemplatePreview(templateId);
+                    });
+                });
+
+                if (customUrlInput) {
+                    customUrlInput.addEventListener('input', function() {
+                        if (this.value.trim()) {
+                            templateCards.forEach(c => c.classList.remove('selected'));
+                            selectedTemplateId = null;
+                            templateIdInput.value = '';
+                            showCustomPreview(this.value.trim());
+                        } else {
+                            hidePreview();
+                        }
+                    });
+                }
+
+                function initializeFilterDropdowns() {
+                    const brands = new Set();
+                    const categories = new Set();
+
+                    templateItems.forEach(item => {
+                        const brandName = item.dataset.brandName;
+                        const categoryName = item.dataset.categoryName;
+
+                        if (brandName && brandName !== 'Chung') brands.add(brandName);
+                        if (categoryName && categoryName !== 'Chung') categories.add(categoryName);
+                    });
+
+                    Array.from(brands).sort().forEach(brand => {
+                        const option = document.createElement('option');
+                        option.value = brand;
+                        option.textContent = brand;
+                        brandFilter.appendChild(option);
+                    });
+
+                    Array.from(categories).sort().forEach(category => {
+                        const option = document.createElement('option');
+                        option.value = category;
+                        option.textContent = category;
+                        categoryFilter.appendChild(option);
+                    });
+                }
+
+                function filterTemplates() {
+                    const selectedBrand = brandFilter.value;
+                    const selectedCategory = categoryFilter.value;
+
+                    templateItems.forEach(item => {
+                        const itemBrand = item.dataset.brandName;
+                        const itemCategory = item.dataset.categoryName;
+
+                        const brandMatch = !selectedBrand || itemBrand === selectedBrand || itemBrand === 'Chung';
+                        const categoryMatch = !selectedCategory || itemCategory === selectedCategory || itemCategory === 'Chung';
+
+                        if (brandMatch && categoryMatch) {
+                            item.classList.remove('hidden');
+                            item.style.display = 'block';
+                        } else {
+                            item.classList.add('hidden');
+                            item.style.display = 'none';
+                        }
+                    });
+                }
+
+                brandFilter.addEventListener('change', filterTemplates);
+                categoryFilter.addEventListener('change', filterTemplates);
+
+                function showTemplatePreview(templateId) {
+                    if (model3DPreview) {
+                        model3DPreview.style.display = 'block';
+                        if (loadingSpinner) loadingSpinner.style.display = 'block';
+                        if (previewText) previewText.textContent = 'Đang tải mô hình...';
+
+                        setTimeout(() => {
+                            if (loadingSpinner) loadingSpinner.style.display = 'none';
+                            if (previewText) previewText.innerHTML = `<i class="fas fa-cube fa-2x text-success"></i><br><small class="text-success">Mô hình đã được chọn (ID: ${templateId})</small>`;
+                        }, 1000);
+                    }
+                }
+
+                function showCustomPreview(url) {
+                    if (model3DPreview) {
+                        model3DPreview.style.display = 'block';
+                        if (loadingSpinner) loadingSpinner.style.display = 'block';
+                        if (previewText) previewText.textContent = 'Đang kiểm tra URL...';
+
+                        setTimeout(() => {
+                            if (loadingSpinner) loadingSpinner.style.display = 'none';
+                            if (previewText) {
+                                const validExtensions = ['.glb', '.gltf', '.obj', '.fbx'];
+                                const isValid = validExtensions.some(ext => url.toLowerCase().includes(ext));
+                                if (isValid) {
+                                    previewText.innerHTML = `<i class="fas fa-cube fa-2x text-primary"></i><br><small class="text-primary">URL mô hình hợp lệ</small>`;
+                                } else {
+                                    previewText.innerHTML = `<i class="fas fa-exclamation-triangle fa-2x text-warning"></i><br><small class="text-warning">Kiểm tra lại URL mô hình</small>`;
+                                }
+                            }
+                        }, 500);
+                    }
+                }
+
+                function hidePreview() {
+                    if (model3DPreview) model3DPreview.style.display = 'none';
+                }
+
+                filterTemplates();
+            }
+
+            // ===== DELIVERY CONFIGURATION =====
+            function initializeDeliveryConfig() {
+                const maxDistanceInput = document.querySelector('input[name="MaxDeliveryDistance"]');
+                const pricePerKmInput = document.querySelector('input[name="PricePerKmDelivery"]');
+                const deliveryPreview = document.getElementById('deliveryPreview');
+
+                if (maxDistanceInput && pricePerKmInput) {
+                    maxDistanceInput.addEventListener('input', updateDeliveryPreview);
+                    pricePerKmInput.addEventListener('input', updateDeliveryPreview);
+                }
+
+                function updateDeliveryPreview() {
+                    const maxDistance = parseFloat(maxDistanceInput.value) || 0;
+                    const pricePerKm = parseFloat(pricePerKmInput.value) || 0;
+
+                    if (maxDistance > 0 && pricePerKm > 0) {
+                        deliveryPreview.style.display = 'block';
+
+                        const distances = [10, 25, 50];
+                        distances.forEach(dist => {
+                            const element = document.getElementById(`delivery${dist}km`);
+                            if (element) {
+                                if (dist <= maxDistance) {
+                                    const cost = dist * pricePerKm;
+                                    element.textContent = formatCurrency(cost);
+                                    element.classList.remove('text-muted');
+                                    element.classList.add('text-primary');
+                                } else {
+                                    element.textContent = 'Ngoài phạm vi';
+                                    element.classList.remove('text-primary');
+                                    element.classList.add('text-muted');
+                                }
+                            }
+                        });
+                    } else {
+                        deliveryPreview.style.display = 'none';
+                    }
+                }
+
+                function formatCurrency(value) {
+                    return new Intl.NumberFormat('vi-VN', {
+                        style: 'currency',
+                        currency: 'VND'
+                    }).format(value);
+                }
+            }
+
+            // ===== FORM SUBMISSION =====
+                    // Cập nhật hàm initializeFormSubmission
+            function initializeFormSubmission() {
+                const form = document.getElementById('createCarForm');
+                const submitBtn = document.getElementById('submitBtn');
+                const submitSpinner = document.getElementById('submitSpinner');
+                const submitIcon = document.getElementById('submitIcon');
+
+                form.addEventListener('submit', function(e) {
+                    console.log('Form submitting...');
+                    console.log('Primary image:', primaryImageFile);
+                    console.log('Additional images:', additionalImageFiles);
+
+                    // Log all form data
+                    const formData = new FormData(form);
+                    for (let [key, value] of formData.entries()) {
+                        console.log(key, value);
+                    }
+
+                    if (!primaryImageFile) {
+                        e.preventDefault();
+                        showToast('error', 'Vui lòng tải lên ít nhất một hình ảnh xe.');
+                        return false;
+                    }
+
+                    submitBtn.disabled = true;
+                    form.classList.add('form-loading');
+
+                    if (submitSpinner) submitSpinner.style.display = 'inline-block';
+                    if (submitIcon) submitIcon.style.display = 'none';
+
+                    submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Đang xử lý...';
+
+                    // Don't prevent default - let form submit naturally
+                    return true;
+                });
+            }
+
+            // ===== UTILITY FUNCTIONS =====
+            function showToast(type, message) {
+                const toastClass = type === 'success' ? 'alert-success' : 'alert-danger';
+                const icon = type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle';
+
+                const toast = document.createElement('div');
+                toast.className = `alert ${toastClass} position-fixed top-0 end-0 m-3`;
+                toast.style.zIndex = '9999';
+                toast.style.minWidth = '300px';
+                toast.innerHTML = `<i class="fas ${icon} me-2"></i>${message}`;
+
+                document.body.appendChild(toast);
+
+                setTimeout(() => {
+                    toast.style.opacity = '0';
+                    toast.style.transition = 'opacity 0.3s';
+                    setTimeout(() => toast.remove(), 300);
+                }, 3000);
+            }
+        });
+    </script>
+}

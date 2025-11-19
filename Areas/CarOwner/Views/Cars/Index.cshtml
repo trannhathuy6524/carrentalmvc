@@ -1,0 +1,276 @@
+﻿@using carrentalmvc.Models.Enums
+@model IEnumerable<carrentalmvc.Models.Car>
+@{
+    ViewData["Title"] = "Xe của tôi";
+
+    // Pagination
+    var pageNumber = ViewBag.PageNumber ?? 1;
+    var totalCount = ViewBag.TotalCount ?? 0;
+    var totalPages = ViewBag.TotalPages ?? 1;
+    var hasPreviousPage = pageNumber > 1;
+    var hasNextPage = pageNumber < totalPages;
+
+    // Filters
+    var searchTerm = ViewBag.SearchTerm as string;
+    var status = ViewBag.Status as CarStatus?;
+    var brandId = ViewBag.BrandId as int?;
+    var categoryId = ViewBag.CategoryId as int?;
+    var brands = ViewBag.Brands as SelectList;
+    var categories = ViewBag.Categories as SelectList;
+}
+
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2"><i class="fas fa-car"></i> Xe của tôi</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <div class="btn-group me-2">
+            <a asp-action="Create" class="btn btn-sm btn-primary">
+                <i class="fas fa-plus"></i> Thêm xe mới
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Filters -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="get" asp-action="Index">
+            <div class="row">
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label for="searchTerm">Tìm kiếm</label>
+                        <input name="searchTerm" value="@searchTerm" class="form-control" placeholder="Tìm theo tên xe..." />
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="form-group">
+                        <label for="status">Trạng thái</label>
+                        <select name="status" class="form-select">
+                            <option value="">Tất cả trạng thái</option>
+                            <option value="@CarStatus.PendingApproval" selected="@(status == CarStatus.PendingApproval)">Chờ duyệt</option>
+                            <option value="@CarStatus.Available" selected="@(status == CarStatus.Available)">Sẵn sàng</option>
+                            <option value="@CarStatus.Rented" selected="@(status == CarStatus.Rented)">Đang thuê</option>
+                            <option value="@CarStatus.Maintenance" selected="@(status == CarStatus.Maintenance)">Bảo trì</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="form-group">
+                        <label for="brandId">Thương hiệu</label>
+                        <select name="brandId" asp-items="brands" class="form-select">
+                            <option value="">Tất cả thương hiệu</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="form-group">
+                        <label for="categoryId">Loại xe</label>
+                        <select name="categoryId" asp-items="categories" class="form-select">
+                            <option value="">Tất cả loại xe</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label>&nbsp;</label>
+                        <div class="d-flex">
+                            <button type="submit" class="btn btn-primary me-2">
+                                <i class="fas fa-search"></i> Tìm kiếm
+                            </button>
+                            <a asp-action="Index" class="btn btn-outline-secondary">
+                                <i class="fas fa-times"></i> Xóa
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Cars Grid -->
+<div class="card">
+    <div class="card-header">
+        <div class="d-flex justify-content-between align-items-center">
+            <h6 class="mb-0">Danh sách xe của tôi</h6>
+            <span class="badge bg-primary">Tổng: @totalCount</span>
+        </div>
+    </div>
+    <div class="card-body">
+        @if (Model.Any())
+        {
+            <div class="row">
+                @foreach (var car in Model)
+                {
+                    var primaryImage = car.CarImages?.FirstOrDefault(img => img.IsPrimary);
+                    var statusText = ViewBag.GetCarStatusText != null
+                    ? ((Func<CarStatus, string>)ViewBag.GetCarStatusText)(car.Status)
+                    : car.Status.ToString();
+
+                    <div class="col-md-6 col-lg-4 mb-4">
+                        <div class="card h-100">
+                            <div class="position-relative">
+                                @if (primaryImage != null && !string.IsNullOrEmpty(primaryImage.ImageUrl))
+                                {
+                                    <img src="@primaryImage.ImageUrl" class="card-img-top" alt="@car.Name" style="height: 200px; object-fit: cover;">
+                                }
+                                else
+                                {
+                                    <div class="card-img-top bg-light d-flex align-items-center justify-content-center" style="height: 200px;">
+                                        <i class="fas fa-car fa-3x text-muted"></i>
+                                    </div>
+                                }
+                                <span class="badge bg-@(GetCarStatusBadgeClass(car.Status)) position-absolute top-0 end-0 m-2">
+                                    @statusText
+                                </span>
+                            </div>
+                            <div class="card-body">
+                                <h5 class="card-title">@car.Name</h5>
+                                <p class="card-text text-muted small">@car.Brand?.Name - @car.Category?.Name</p>
+                                <p class="card-text">
+                                    <small class="text-muted">
+                                        @if (car.Year > 0)
+                                        {
+                                            <span>@car.Year</span>
+                                        }
+                                        @if (!string.IsNullOrEmpty(car.Color))
+                                        {
+                                            <span>• @car.Color</span>
+                                        }
+                                        @if (car.Seats.HasValue)
+                                        {
+                                            <span>• @car.Seats chỗ</span>
+                                        }
+                                    </small>
+                                </p>
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <strong class="text-primary">@car.PricePerDay.ToString("N0") VNĐ/ngày</strong>
+                                        @if (car.PricePerHour.HasValue)
+                                        {
+                                            <br>
+                                            <small class="text-muted">@car.PricePerHour.Value.ToString("N0") VNĐ/giờ</small>
+                                        }
+                                    </div>
+                                    <div class="btn-group" role="group">
+                                        <a asp-action="Details" asp-route-id="@car.CarId" class="btn btn-sm btn-outline-primary" title="Chi tiết">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                        <a asp-action="Edit" asp-route-id="@car.CarId" class="btn btn-sm btn-outline-secondary" title="Sửa">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                        @if (car.Status == CarStatus.Available)
+                                        {
+                                            <button type="button" class="btn btn-sm btn-outline-warning" onclick="updateStatus(@car.CarId, '@CarStatus.Maintenance')" title="Bảo trì">
+                                                <i class="fas fa-wrench"></i>
+                                            </button>
+                                        }
+                                        else if (car.Status == CarStatus.Maintenance)
+                                        {
+                                            <button type="button" class="btn btn-sm btn-outline-success" onclick="updateStatus(@car.CarId, '@CarStatus.Available')" title="Sẵn sàng">
+                                                <i class="fas fa-check"></i>
+                                            </button>
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="card-footer text-muted">
+                                <small>Tạo: @car.CreatedAt.ToString("dd/MM/yyyy")</small>
+                                @if (car.UpdatedAt != car.CreatedAt)
+                                {
+                                    <br>
+                                    <small>Cập nhật: @car.UpdatedAt.ToString("dd/MM/yyyy")</small>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+
+            <!-- Pagination -->
+            @if (totalPages > 1)
+            {
+                <nav aria-label="Car pagination">
+                    <ul class="pagination justify-content-center">
+                        <li class="page-item @(!hasPreviousPage ? "disabled" : "")">
+                            <a class="page-link" asp-route-page="@(pageNumber - 1)" asp-route-searchTerm="@searchTerm" asp-route-status="@status" asp-route-brandId="@brandId" asp-route-categoryId="@categoryId">
+                                <i class="fas fa-chevron-left"></i>
+                            </a>
+                        </li>
+
+                        @for (int i = Math.Max(1, pageNumber - 2); i <= Math.Min(totalPages, pageNumber + 2); i++)
+                        {
+                            <li class="page-item @(i == pageNumber ? "active" : "")">
+                                <a class="page-link" asp-route-page="@i" asp-route-searchTerm="@searchTerm" asp-route-status="@status" asp-route-brandId="@brandId" asp-route-categoryId="@categoryId">@i</a>
+                            </li>
+                        }
+
+                        <li class="page-item @(!hasNextPage ? "disabled" : "")">
+                            <a class="page-link" asp-route-page="@(pageNumber + 1)" asp-route-searchTerm="@searchTerm" asp-route-status="@status" asp-route-brandId="@brandId" asp-route-categoryId="@categoryId">
+                                <i class="fas fa-chevron-right"></i>
+                            </a>
+                        </li>
+                    </ul>
+                </nav>
+            }
+        }
+        else
+        {
+            <div class="text-center py-5">
+                <i class="fas fa-car fa-3x text-muted mb-3"></i>
+                <h5 class="text-muted">Chưa có xe nào</h5>
+                <p class="text-muted">Hãy thêm xe đầu tiên của bạn để bắt đầu kinh doanh</p>
+                <a asp-action="Create" class="btn btn-primary">
+                    <i class="fas fa-plus"></i> Thêm xe đầu tiên
+                </a>
+            </div>
+        }
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function updateStatus(carId, status) {
+            if (confirm('Bạn có chắc chắn muốn thay đổi trạng thái xe này?')) {
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = '@Url.Action("UpdateStatus")';
+
+                const carIdInput = document.createElement('input');
+                carIdInput.type = 'hidden';
+                carIdInput.name = 'id';
+                carIdInput.value = carId;
+
+                const statusInput = document.createElement('input');
+                statusInput.type = 'hidden';
+                statusInput.name = 'status';
+                statusInput.value = status;
+
+                const tokenInput = document.createElement('input');
+                tokenInput.type = 'hidden';
+                tokenInput.name = '__RequestVerificationToken';
+                tokenInput.value = $('input[name="__RequestVerificationToken"]').val();
+
+                form.appendChild(carIdInput);
+                form.appendChild(statusInput);
+                form.appendChild(tokenInput);
+
+                document.body.appendChild(form);
+                form.submit();
+            }
+        }
+    </script>
+}
+
+@functions {
+    private string GetCarStatusBadgeClass(CarStatus status)
+    {
+        return status switch
+        {
+            CarStatus.Available => "success",
+            CarStatus.Rented => "warning",
+            CarStatus.Maintenance => "danger",
+            CarStatus.PendingApproval => "secondary",
+            _ => "secondary"
+        };
+    }
+}

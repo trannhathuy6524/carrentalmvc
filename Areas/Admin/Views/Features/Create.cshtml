@@ -1,0 +1,155 @@
+﻿@model carrentalmvc.Models.Feature
+@{
+    ViewData["Title"] = "Thêm tính năng mới";
+    var initialName = Model?.Name ?? "Tên tính năng";
+    var initialDescription = Model?.Description ?? "Mô tả tính năng";
+    var initialIcon = Model?.Icon ?? "fas fa-cog";
+}
+
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2"><i class="fas fa-plus"></i> Thêm tính năng mới</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <div class="btn-group">
+            <a asp-action="Index" class="btn btn-sm btn-outline-secondary">
+                <i class="fas fa-arrow-left"></i> Quay lại
+            </a>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0">Thông tin tính năng</h6>
+            </div>
+            <div class="card-body">
+                <form asp-action="Create" method="post">
+                    @Html.AntiForgeryToken()
+                    <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+
+                    <div class="mb-3">
+                        <label asp-for="Name" class="form-label"></label>
+                        <input asp-for="Name" class="form-control" placeholder="Nhập tên tính năng..." />
+                        <span asp-validation-for="Name" class="text-danger"></span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="Description" class="form-label"></label>
+                        <textarea asp-for="Description" class="form-control" rows="3"
+                                  placeholder="Nhập mô tả về tính năng này..."></textarea>
+                        <span asp-validation-for="Description" class="text-danger"></span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="Icon" class="form-label"></label>
+                        <div class="input-group">
+                            <span class="input-group-text">
+                                <i id="icon-preview" class="@(initialIcon)"></i>
+                            </span>
+                            <input asp-for="Icon" class="form-control" placeholder="fas fa-wifi, fas fa-car..." id="icon-input" />
+                        </div>
+                        <span asp-validation-for="Icon" class="text-danger"></span>
+                        <div class="form-text">
+                            Sử dụng Font Awesome class. Ví dụ: fas fa-wifi, fas fa-bluetooth, fas fa-car
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-between">
+                        <a asp-action="Index" class="btn btn-secondary">
+                            <i class="fas fa-times"></i> Hủy
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save"></i> Lưu tính năng
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h6 class="mb-0">Xem trước</h6>
+            </div>
+            <div class="card-body text-center">
+                <div id="feature-preview" class="p-3 border rounded">
+                    <i id="preview-icon" class="@(initialIcon) fa-3x text-primary mb-2"></i>
+                    <h6 id="preview-name">@initialName</h6>
+                    <p id="preview-description" class="text-muted small">@initialDescription</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0">Icon phổ biến</h6>
+            </div>
+            <div class="card-body">
+                <div class="row g-2">
+                    <div class="col-4 text-center">
+                        <button type="button" class="btn btn-outline-secondary btn-sm icon-btn" data-icon="fas fa-wifi">
+                            <i class="fas fa-wifi"></i><br><small>WiFi</small>
+                        </button>
+                    </div>
+                    <div class="col-4 text-center">
+                        <button type="button" class="btn btn-outline-secondary btn-sm icon-btn" data-icon="fas fa-bluetooth">
+                            <i class="fas fa-bluetooth"></i><br><small>Bluetooth</small>
+                        </button>
+                    </div>
+                    <div class="col-4 text-center">
+                        <button type="button" class="btn btn-outline-secondary btn-sm icon-btn" data-icon="fas fa-snowflake">
+                            <i class="fas fa-snowflake"></i><br><small>A/C</small>
+                        </button>
+                    </div>
+                    <div class="col-4 text-center">
+                        <button type="button" class="btn btn-outline-secondary btn-sm icon-btn" data-icon="fas fa-music">
+                            <i class="fas fa-music"></i><br><small>Music</small>
+                        </button>
+                    </div>
+                    <div class="col-4 text-center">
+                        <button type="button" class="btn btn-outline-secondary btn-sm icon-btn" data-icon="fas fa-usb">
+                            <i class="fas fa-usb"></i><br><small>USB</small>
+                        </button>
+                    </div>
+                    <div class="col-4 text-center">
+                        <button type="button" class="btn btn-outline-secondary btn-sm icon-btn" data-icon="fas fa-shield-alt">
+                            <i class="fas fa-shield-alt"></i><br><small>Safety</small>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+    <script>
+        $(document).ready(function() {
+            // Update preview when typing (works after post-back with Model values)
+            $('#Name').on('input', function() {
+                $('#preview-name').text($(this).val() || 'Tên tính năng');
+            });
+
+            $('#Description').on('input', function() {
+                $('#preview-description').text($(this).val() || 'Mô tả tính năng');
+            });
+
+            $('#icon-input').on('input', function() {
+                var iconClass = $(this).val() || 'fas fa-cog';
+                $('#icon-preview').attr('class', iconClass);
+                $('#preview-icon').attr('class', iconClass + ' fa-3x text-primary mb-2');
+            });
+
+            // Icon selection
+            $('.icon-btn').click(function() {
+                var iconClass = $(this).data('icon');
+                $('#icon-input').val(iconClass).trigger('input');
+            });
+        });
+    </script>
+}

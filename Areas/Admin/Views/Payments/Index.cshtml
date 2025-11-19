@@ -1,0 +1,338 @@
+﻿@using carrentalmvc.Models.Enums
+@model IEnumerable<carrentalmvc.Models.Payment>
+@{
+    ViewData["Title"] = "Quản lý thanh toán";
+
+    // Summary & pagination from controller (ViewBag)
+    var totalRevenue = ViewBag.TotalRevenue ?? 0m;
+    var pendingPayments = ViewBag.PendingPayments ?? 0;
+    var completedPayments = ViewBag.CompletedPayments ?? 0;
+    var failedPayments = ViewBag.FailedPayments ?? 0;
+
+    var searchTerm = ViewBag.SearchTerm as string ?? string.Empty;
+    PaymentStatus? filterStatus = ViewBag.Status != null ? (PaymentStatus?)ViewBag.Status : null;
+    PaymentMethod? filterPaymentMethod = ViewBag.PaymentMethod != null ? (PaymentMethod?)ViewBag.PaymentMethod : null;
+    PaymentType? filterPaymentType = ViewBag.PaymentType != null ? (PaymentType?)ViewBag.PaymentType : null;
+    DateTime? filterStartDate = ViewBag.StartDate != null ? (DateTime?)ViewBag.StartDate : null;
+    DateTime? filterEndDate = ViewBag.EndDate != null ? (DateTime?)ViewBag.EndDate : null;
+
+    var pageNumber = ViewBag.PageNumber != null ? (int)ViewBag.PageNumber : 1;
+    var totalPages = ViewBag.TotalPages != null ? (int)ViewBag.TotalPages : 1;
+    var totalCount = ViewBag.TotalCount != null ? (int)ViewBag.TotalCount : Model.Count();
+
+    var getPaymentMethodText = ViewBag.GetPaymentMethodText as Func<PaymentMethod, string>;
+    var getPaymentTypeText = ViewBag.GetPaymentTypeText as Func<PaymentType, string>;
+    var getPaymentStatusText = ViewBag.GetPaymentStatusText as Func<PaymentStatus, string>;
+}
+
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2"><i class="fas fa-credit-card"></i> Quản lý thanh toán</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <div class="btn-group me-2">
+            <button type="button" class="btn btn-sm btn-outline-secondary">
+                <i class="fas fa-download"></i> Xuất báo cáo
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Summary Cards -->
+<div class="row mb-4">
+    <div class="col-xl-3 col-md-6">
+        <div class="card border-left-success shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-success text-uppercase mb-1">Tổng thu</div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">@totalRevenue.ToString("N0") VNĐ</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-dollar-sign fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-3 col-md-6">
+        <div class="card border-left-warning shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">Chờ thanh toán</div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">@pendingPayments</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-clock fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-3 col-md-6">
+        <div class="card border-left-primary shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">Hoàn thành</div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">@completedPayments</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-check-circle fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-3 col-md-6">
+        <div class="card border-left-danger shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-danger text-uppercase mb-1">Thất bại</div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">@failedPayments</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-times-circle fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Filters -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="get" asp-action="Index">
+            <div class="row">
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label for="searchTerm">Tìm kiếm</label>
+                        <input name="searchTerm" value="@searchTerm" class="form-control" placeholder="Tìm theo mã GD, tên KH..." />
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="form-group">
+                        <label for="status">Trạng thái</label>
+                        <select name="status" class="form-select">
+                            <option value="">Tất cả trạng thái</option>
+                            @foreach (PaymentStatus s in Enum.GetValues(typeof(PaymentStatus)))
+                            {
+                                var val = (int)s;
+                                var text = getPaymentStatusText?.Invoke(s) ?? s.ToString();
+                                if (filterStatus.HasValue && filterStatus.Value == s)
+                                {
+                                    <option value="@val" selected="selected">@text</option>
+                                }
+                                else
+                                {
+                                    <option value="@val">@text</option>
+                                }
+                            }
+                        </select>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="form-group">
+                        <label for="paymentMethod">Phương thức</label>
+                        <select name="paymentMethod" class="form-select">
+                            <option value="">Tất cả phương thức</option>
+                            @foreach (PaymentMethod m in Enum.GetValues(typeof(PaymentMethod)))
+                            {
+                                var val = (int)m;
+                                var text = getPaymentMethodText?.Invoke(m) ?? m.ToString();
+                                if (filterPaymentMethod.HasValue && filterPaymentMethod.Value == m)
+                                {
+                                    <option value="@val" selected="selected">@text</option>
+                                }
+                                else
+                                {
+                                    <option value="@val">@text</option>
+                                }
+                            }
+                        </select>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="form-group">
+                        <label for="startDate">Từ ngày</label>
+                        <input name="startDate" value="@(filterStartDate?.ToString("yyyy-MM-dd") ?? "")" class="form-control" type="date" />
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="form-group">
+                        <label for="endDate">Đến ngày</label>
+                        <input name="endDate" value="@(filterEndDate?.ToString("yyyy-MM-dd") ?? "")" class="form-control" type="date" />
+                    </div>
+                </div>
+                <div class="col-md-1">
+                    <div class="form-group">
+                        <label>&nbsp;</label>
+                        <button type="submit" class="btn btn-primary w-100"><i class="fas fa-search"></i></button>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Payments List -->
+<div class="card">
+    <div class="card-header">
+        <div class="d-flex justify-content-between align-items-center">
+            <h6 class="mb-0">Danh sách thanh toán</h6>
+            <span class="badge bg-primary">Tổng: @totalCount</span>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        @if (Model.Any())
+        {
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Mã GD</th>
+                            <th>Hợp đồng</th>
+                            <th>Khách hàng</th>
+                            <th>Số tiền</th>
+                            <th>Phương thức</th>
+                            <th>Loại</th>
+                            <th>Trạng thái</th>
+                            <th>Ngày TT</th>
+                            <th class="text-center">Thao tác</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var payment in Model)
+                        {
+                            var renterName = payment.Rental?.Renter?.FullName ?? "N/A";
+                            <tr>
+                                <td>
+                                    <a asp-action="Details" asp-route-id="@payment.PaymentId" class="fw-bold text-decoration-none">#@payment.PaymentId</a>
+                                    @if (!string.IsNullOrEmpty(payment.TransactionId))
+                                    {
+                                        <br />
+                            
+                                        <small class="text-muted">TXN: @payment.TransactionId</small>
+                                    }
+                                </td>
+                                <td>
+                                    <a asp-area="Admin" asp-controller="Rentals" asp-action="Details" asp-route-id="@payment.RentalId">#@payment.RentalId</a>
+                                </td>
+                                <td>@renterName</td>
+                                <td>
+                                    <div class="fw-bold text-@(payment.Amount >= 0 ? "success" : "danger")">
+                                        @payment.Amount.ToString("N0") VNĐ
+                                    </div>
+                                </td>
+                                <td><span class="badge bg-info">@getPaymentMethodText?.Invoke(payment.PaymentMethod) ?? payment.PaymentMethod.ToString()</span></td>
+                                <td><span class="badge bg-secondary">@getPaymentTypeText?.Invoke(payment.PaymentType) ?? payment.PaymentType.ToString()</span></td>
+                                <td><span class="badge bg-@(GetPaymentStatusBadgeClass(payment.Status))">@getPaymentStatusText?.Invoke(payment.Status) ?? payment.Status.ToString()</span></td>
+                                <td>
+                                    @if (payment.PaymentDate != default(DateTime))
+                                    {
+                                        @payment.PaymentDate.ToString("dd/MM/yyyy HH:mm")
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">Chưa thanh toán</span>
+                                    }
+                                </td>
+                                <td class="text-center">
+                                    <div class="btn-group" role="group">
+                                        <a asp-action="Details" asp-route-id="@payment.PaymentId" class="btn btn-sm btn-outline-primary" title="Chi tiết">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+
+                                        @if (payment.Status == PaymentStatus.Pending)
+                                        {
+                                            <form asp-action="MarkCompleted" asp-route-id="@payment.PaymentId" method="post" class="d-inline">
+                                                @Html.AntiForgeryToken()
+                                                <button type="submit" class="btn btn-sm btn-success" title="Đánh dấu hoàn thành" onclick="return confirm('Bạn có chắc muốn đánh dấu thanh toán này đã hoàn thành?')">
+                                                    <i class="fas fa-check"></i>
+                                                </button>
+                                            </form>
+
+                                            <form asp-action="MarkFailed" asp-route-id="@payment.PaymentId" method="post" class="d-inline">
+                                                @Html.AntiForgeryToken()
+                                                <button type="submit" class="btn btn-sm btn-danger" title="Đánh dấu thất bại" onclick="return confirm('Bạn có chắc muốn đánh dấu thanh toán này thất bại?')">
+                                                    <i class="fas fa-times"></i>
+                                                </button>
+                                            </form>
+                                        }
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Pagination -->
+            @if (totalPages > 1)
+            {
+                <div class="card-footer">
+                    <nav aria-label="Payments pagination">
+                        <ul class="pagination justify-content-center mb-0">
+                            <li class="page-item @(pageNumber == 1 ? "disabled" : "")">
+                                <a class="page-link" asp-route-page="@(pageNumber - 1)"
+                                   asp-route-searchTerm="@searchTerm"
+                                   asp-route-status="@( (int?)(filterStatus) )"
+                                   asp-route-paymentMethod="@( (int?)(filterPaymentMethod) )"
+                                   asp-route-startDate="@(filterStartDate?.ToString("yyyy-MM-dd"))"
+                                   asp-route-endDate="@(filterEndDate?.ToString("yyyy-MM-dd"))">
+                                    <i class="fas fa-chevron-left"></i>
+                                </a>
+                            </li>
+
+                            @for (int i = Math.Max(1, pageNumber - 2); i <= Math.Min(totalPages, pageNumber + 2); i++)
+                            {
+                                <li class="page-item @(i == pageNumber ? "active" : "")">
+                                    <a class="page-link" asp-route-page="@i"
+                                       asp-route-searchTerm="@searchTerm"
+                                       asp-route-status="@( (int?)(filterStatus) )"
+                                       asp-route-paymentMethod="@( (int?)(filterPaymentMethod) )"
+                                       asp-route-startDate="@(filterStartDate?.ToString("yyyy-MM-dd"))"
+                                       asp-route-endDate="@(filterEndDate?.ToString("yyyy-MM-dd"))">@i</a>
+                                </li>
+                            }
+
+                            <li class="page-item @(pageNumber >= totalPages ? "disabled" : "")">
+                                <a class="page-link" asp-route-page="@(pageNumber + 1)"
+                                   asp-route-searchTerm="@searchTerm"
+                                   asp-route-status="@( (int?)(filterStatus) )"
+                                   asp-route-paymentMethod="@( (int?)(filterPaymentMethod) )"
+                                   asp-route-startDate="@(filterStartDate?.ToString("yyyy-MM-dd"))"
+                                   asp-route-endDate="@(filterEndDate?.ToString("yyyy-MM-dd"))">
+                                    <i class="fas fa-chevron-right"></i>
+                                </a>
+                            </li>
+                        </ul>
+                    </nav>
+                </div>
+            }
+        }
+        else
+        {
+            <div class="text-center py-5">
+                <i class="fas fa-credit-card fa-3x text-muted mb-3"></i>
+                <h5 class="text-muted">Không tìm thấy thanh toán nào</h5>
+                <p class="text-muted">Thử thay đổi điều kiện tìm kiếm</p>
+            </div>
+        }
+    </div>
+</div>
+
+@functions {
+    private string GetPaymentStatusBadgeClass(carrentalmvc.Models.Enums.PaymentStatus status)
+    {
+        return status switch
+        {
+            carrentalmvc.Models.Enums.PaymentStatus.Pending => "warning",
+            carrentalmvc.Models.Enums.PaymentStatus.Completed => "success",
+            carrentalmvc.Models.Enums.PaymentStatus.Failed => "danger",
+            carrentalmvc.Models.Enums.PaymentStatus.Cancelled => "secondary",
+            _ => "secondary"
+        };
+    }
+}

@@ -1,0 +1,439 @@
+@using carrentalmvc.Models
+@{
+    ViewData["Title"] = "Dashboard - Tài xế";
+    Layout = "~/Areas/Driver/Views/Shared/_DriverLayout.cshtml";
+
+    var stats = ViewBag.Stats;
+    var pendingRentals = ViewBag.PendingRentals as List<Rental> ?? new List<Rental>();
+    var activeRentals = ViewBag.ActiveRentals as List<Rental> ?? new List<Rental>();
+    var upcomingRentals = ViewBag.UpcomingRentals as List<Rental> ?? new List<Rental>();
+    var availableRentals = ViewBag.AvailableRentals as List<Rental> ?? new List<Rental>(); // ✅ PHASE 2
+}
+
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+        <h1 class="h2">
+            <i class="fas fa-tachometer-alt"></i> Dashboard Tài xế
+        </h1>
+        <div class="btn-toolbar mb-2 mb-md-0">
+            <div class="btn-group me-2">
+                <a asp-action="Index" asp-controller="Rentals" class="btn btn-sm btn-outline-primary">
+                    <i class="fas fa-list"></i> Tất cả đơn thuê
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="row mb-4">
+        <!-- ✅ PHASE 2: Available Rentals Card -->
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-danger shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-danger text-uppercase mb-1">
+                                Đơn có thể nhận
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                @stats.AvailableRentals
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-bell fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pending Assignments -->
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-warning shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                                Đơn chờ xác nhận
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                @stats.Pending
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-clock fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Active Rentals -->
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-success shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                                Đơn đang chạy
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                @stats.Active
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-car fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Completed -->
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-info shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                                Đã hoàn thành
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                @stats.Completed
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-check-circle fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Earnings This Month -->
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-primary shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                                Thu nhập tháng này
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                @stats.ThisMonthEarnings.ToString("N0") VNĐ
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-dollar-sign fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ✅ PHASE 2: Available Rentals Section -->
+    @if (availableRentals.Any())
+    {
+        <div class="card shadow mb-4">
+            <div class="card-header py-3 d-flex justify-content-between align-items-center bg-danger text-white">
+                <h6 class="m-0 font-weight-bold">
+                    <i class="fas fa-bell"></i> Đơn có thể nhận (@availableRentals.Count)
+                </h6>
+                <a asp-action="Index" asp-controller="Rentals" asp-route-filter="available" class="btn btn-sm btn-light">
+                    <i class="fas fa-list"></i> Xem tất cả
+                </a>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle"></i>
+                    <strong>Đơn có thể nhận:</strong> Đây là các đơn thuê cần tài xế mà chưa có ai nhận. 
+                    Bạn có thể nhận đơn bất kỳ (first-come-first-served). Phí tài xế sẽ được tính theo hợp đồng của bạn với chủ xe.
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead class="table-danger">
+                            <tr>
+                                <th>Mã đơn</th>
+                                <th>Xe</th>
+                                <th>Khách hàng</th>
+                                <th>Thời gian</th>
+                                <th>Phí ước tính</th>
+                                <th>Chủ xe</th>
+                                <th>Thao tác</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var rental in availableRentals)
+                            {
+                                var duration = rental.EndDate - rental.StartDate;
+                                var totalDays = Math.Max(1, (int)Math.Ceiling(duration.TotalDays));
+                                var totalHours = (decimal)Math.Ceiling(duration.TotalHours);
+                                var isHourly = totalHours < 24 && totalHours >= 4;
+                                
+                                // ✅ FIX: Calculate driver fee based on fixed 500k instead of EstimatedDriverFee
+                                decimal estimatedFee = isHourly 
+                                    ? totalHours * 62500m  // 500k / 8 = 62,500 VNĐ/giờ
+                                    : totalDays * 500000m; // 500k VNĐ/ngày
+
+                                <tr>
+                                    <td>
+                                        <strong class="text-danger">#@rental.RentalId</strong><br />
+                                        <span class="badge bg-danger">Mới</span>
+                                    </td>
+                                    <td>
+                                        @rental.Car?.Name<br />
+                                        <small class="text-muted">@rental.Car?.Brand?.Name</small>
+                                    </td>
+                                    <td>
+                                        @rental.Renter?.FullName<br />
+                                        <small class="text-muted">@rental.Renter?.PhoneNumber</small>
+                                    </td>
+                                    <td>
+                                        <small>
+                                            <i class="fas fa-calendar"></i> @rental.StartDate.ToString("dd/MM/yyyy HH:mm")<br />
+                                            <i class="fas fa-arrow-right"></i> @rental.EndDate.ToString("dd/MM/yyyy HH:mm")<br />
+                                            <strong>@(isHourly ? $"{totalHours:F0} giờ" : $"{totalDays} ngày")</strong>
+                                        </small>
+                                    </td>
+                                    <td>
+                                        <strong class="text-success">@estimatedFee.ToString("N0") VNĐ</strong><br />
+                                        <small class="text-muted">
+                                            (@(isHourly ? "62,500 VNĐ/giờ" : "500,000 VNĐ/ngày"))
+                                        </small>
+                                    </td>
+                                    <td>
+                                        <small>
+                                            @rental.Car?.Owner?.FullName<br />
+                                            @rental.Car?.Owner?.PhoneNumber
+                                        </small>
+                                    </td>
+                                    <td>
+                                        <form asp-controller="Rentals" asp-action="Claim" asp-route-id="@rental.RentalId" method="post" class="d-inline">
+                                            @Html.AntiForgeryToken()
+                                            <button type="submit" class="btn btn-sm btn-success w-100 mb-1"
+                                                    onclick="return confirm('Bạn có chắc muốn nhận đơn này? Phí ước tính: @(estimatedFee.ToString("N0")) VNĐ')">
+                                                <i class="fas fa-hand-paper"></i> Nhận đơn
+                                            </button>
+                                        </form>
+                                        <a asp-controller="Rentals" asp-action="Details" asp-route-id="@rental.RentalId" 
+                                           class="btn btn-sm btn-outline-info w-100">
+                                            <i class="fas fa-eye"></i> Chi tiết
+                                        </a>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    }
+
+    <!-- Pending Rentals Section -->
+    @if (pendingRentals.Any())
+    {
+        <div class="card shadow mb-4">
+            <div class="card-header py-3 d-flex justify-content-between align-items-center">
+                <h6 class="m-0 font-weight-bold text-warning">
+                    <i class="fas fa-exclamation-circle"></i> Đơn thuê cần xử lý (@pendingRentals.Count)
+                </h6>
+                <a asp-action="Index" asp-controller="Rentals" asp-route-filter="pending" class="btn btn-sm btn-warning">
+                    Xem tất cả
+                </a>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Mã đơn</th>
+                                <th>Xe</th>
+                                <th>Khách hàng</th>
+                                <th>Thời gian</th>
+                                <th>Chủ xe</th>
+                                <th>Thao tác</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var rental in pendingRentals)
+                            {
+                                <tr>
+                                    <td>
+                                        <strong>#@rental.RentalId</strong>
+                                    </td>
+                                    <td>
+                                        @rental.Car?.Name<br />
+                                        <small class="text-muted">@rental.Car?.Brand?.Name</small>
+                                    </td>
+                                    <td>
+                                        @rental.Renter?.FullName<br />
+                                        <small class="text-muted">@rental.Renter?.PhoneNumber</small>
+                                    </td>
+                                    <td>
+                                        <small>
+                                            <i class="fas fa-calendar"></i> @rental.StartDate.ToString("dd/MM/yyyy")<br />
+                                            <i class="fas fa-arrow-right"></i> @rental.EndDate.ToString("dd/MM/yyyy")
+                                        </small>
+                                    </td>
+                                    <td>
+                                        <small>
+                                            @rental.Car?.Owner?.FullName<br />
+                                            @rental.Car?.Owner?.PhoneNumber
+                                        </small>
+                                    </td>
+                                    <td>
+                                        <a asp-controller="Rentals" asp-area="Driver" asp-action="Details" asp-route-id="@rental.RentalId" class="btn btn-sm btn-primary">
+                                            <i class="fas fa-eye"></i> Chi tiết
+                                        </a>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    }
+
+    <div class="row">
+        <!-- Active Rentals -->
+        <div class="col-lg-6 mb-4">
+            <div class="card shadow">
+                <div class="card-header py-3 d-flex justify-content-between align-items-center">
+                    <h6 class="m-0 font-weight-bold text-success">
+                        <i class="fas fa-car"></i> Đơn đang chạy (@activeRentals.Count)
+                    </h6>
+                </div>
+                <div class="card-body">
+                    @if (activeRentals.Any())
+                    {
+                        <div class="list-group">
+                            @foreach (var rental in activeRentals)
+                            {
+                                <a asp-action="Details" asp-route-id="@rental.RentalId" 
+                                   class="list-group-item list-group-item-action">
+                                    <div class="d-flex w-100 justify-content-between">
+                                        <h6 class="mb-1">@rental.Car?.Name</h6>
+                                        <small class="text-success">
+                                            <i class="fas fa-circle"></i> Đang chạy
+                                        </small>
+                                    </div>
+                                    <p class="mb-1">
+                                        <small>
+                                            <i class="fas fa-user"></i> @rental.Renter?.FullName<br />
+                                            <i class="fas fa-calendar"></i> 
+                                            @rental.StartDate.ToString("dd/MM/yyyy") - @rental.EndDate.ToString("dd/MM/yyyy")
+                                        </small>
+                                    </p>
+                                </a>
+                            }
+                        </div>
+                    }
+                    else
+                    {
+                        <p class="text-muted text-center py-3">
+                            <i class="fas fa-info-circle"></i> Không có đơn nào đang chạy
+                        </p>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <!-- Upcoming Rentals -->
+        <div class="col-lg-6 mb-4">
+            <div class="card shadow">
+                <div class="card-header py-3 d-flex justify-content-between align-items-center">
+                    <h6 class="m-0 font-weight-bold text-info">
+                        <i class="fas fa-calendar-alt"></i> Lịch sắp tới (@upcomingRentals.Count)
+                    </h6>
+                </div>
+                <div class="card-body">
+                    @if (upcomingRentals.Any())
+                    {
+                        <div class="list-group">
+                            @foreach (var rental in upcomingRentals)
+                            {
+                                <a asp-action="Details" asp-route-id="@rental.RentalId" 
+                                   class="list-group-item list-group-item-action">
+                                    <div class="d-flex w-100 justify-content-between">
+                                        <h6 class="mb-1">@rental.Car?.Name</h6>
+                                        <small class="text-muted">
+                                            Bắt đầu: @rental.StartDate.ToString("dd/MM HH:mm")
+                                        </small>
+                                    </div>
+                                    <p class="mb-1">
+                                        <small>
+                                            <i class="fas fa-user"></i> @rental.Renter?.FullName<br />
+                                            <i class="fas fa-building"></i> @rental.Car?.Owner?.FullName
+                                        </small>
+                                    </p>
+                                </a>
+                            }
+                        </div>
+                    }
+                    else
+                    {
+                        <p class="text-muted text-center py-3">
+                            <i class="fas fa-info-circle"></i> Không có lịch sắp tới
+                        </p>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Total Earnings Info -->
+    <div class="row">
+        <div class="col-lg-12 mb-4">
+            <div class="card shadow">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">
+                        <i class="fas fa-chart-line"></i> Thông tin thu nhập
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h5>Tổng thu nhập từ tất cả đơn:</h5>
+                            <h3 class="text-success">@stats.TotalEarnings.ToString("N0") VNĐ</h3>
+                            <small class="text-muted">
+                                Từ @stats.Completed đơn hoàn thành
+                            </small>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="alert alert-info">
+                                <i class="fas fa-info-circle"></i>
+                                <strong>Lưu ý:</strong>
+                                <ul class="mb-0 mt-2">
+                                    <li>Thu nhập được tính dựa trên phí tài xế (30% giá trị đơn)</li>
+                                    <li>Thanh toán được thực hiện sau khi hoàn thành đơn thuê</li>
+                                    <li>Liên hệ chủ xe để biết thêm chi tiết về thanh toán</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .border-left-danger {
+        border-left: 0.25rem solid #e74a3b !important;
+    }
+    .border-left-warning {
+        border-left: 0.25rem solid #f6c23e !important;
+    }
+    .border-left-success {
+        border-left: 0.25rem solid #1cc88a !important;
+    }
+    .border-left-info {
+        border-left: 0.25rem solid #36b9cc !important;
+    }
+    .border-left-primary {
+        border-left: 0.25rem solid #4e73df !important;
+    }
+</style>

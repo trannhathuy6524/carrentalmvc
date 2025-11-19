@@ -1,0 +1,432 @@
+@model carrentalmvc.Models.Rental
+
+@{
+    ViewData["Title"] = $"Chi tiết đơn thuê #{Model.RentalId}";
+    Layout = "~/Areas/Admin/Views/Shared/_AdminLayout.cshtml";
+}
+
+<div class="page-header">
+    <div class="d-flex justify-content-between align-items-center">
+        <div>
+            <h1 class="page-title">Chi tiết đơn thuê #@Model.RentalId</h1>
+            <p class="page-subtitle">
+                @{
+                    var statusClass = Model.Status switch
+                    {
+                        carrentalmvc.Models.Enums.RentalStatus.Pending => "warning",
+                        carrentalmvc.Models.Enums.RentalStatus.Confirmed => "info",
+                        carrentalmvc.Models.Enums.RentalStatus.Active => "success",
+                        carrentalmvc.Models.Enums.RentalStatus.Completed => "primary",
+                        carrentalmvc.Models.Enums.RentalStatus.Cancelled => "danger",
+                        carrentalmvc.Models.Enums.RentalStatus.Overdue => "danger",
+                        _ => "secondary"
+                    };
+                }
+                <span class="status-badge @statusClass">@ViewBag.StatusText</span>
+            </p>
+        </div>
+        <div>
+            <a asp-action="Index" class="btn-modern btn-secondary">
+                <i class="fas fa-arrow-left"></i> Quay lại
+            </a>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Left Column: Rental Info -->
+    <div class="col-lg-8">
+        <!-- Rental Information -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Thông tin thuê xe</h5>
+            </div>
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label class="text-muted mb-1">Ngày bắt đầu</label>
+                        <p class="mb-0 fw-semibold">
+                            <i class="fas fa-calendar-alt text-primary me-2"></i>
+                            @Model.StartDate.ToString("dd/MM/yyyy HH:mm")
+                        </p>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="text-muted mb-1">Ngày kết thúc</label>
+                        <p class="mb-0 fw-semibold">
+                            <i class="fas fa-calendar-alt text-danger me-2"></i>
+                            @Model.EndDate.ToString("dd/MM/yyyy HH:mm")
+                        </p>
+                    </div>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label class="text-muted mb-1">Số ngày thuê</label>
+                        <p class="mb-0 fw-semibold">@ViewBag.TotalDays ngày</p>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="text-muted mb-1">Yêu cầu tài xế</label>
+                        <p class="mb-0">
+                            @if (Model.RequiresDriver)
+                            {
+                                <span class="badge bg-info">
+                                    <i class="fas fa-user-tie"></i> Có tài xế
+                                </span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-secondary">Tự lái</span>
+                            }
+                        </p>
+                    </div>
+                </div>
+
+                @if (Model.RequiresDriver && Model.Driver != null)
+                {
+                    <div class="alert alert-info mb-3">
+                        <h6 class="mb-2"><i class="fas fa-user-tie me-2"></i>Tài xế</h6>
+                        <p class="mb-1"><strong>Họ tên:</strong> @(Model.Driver.FullName ?? Model.Driver.Email)</p>
+                        <p class="mb-0"><strong>Email:</strong> @Model.Driver.Email</p>
+                    </div>
+                }
+
+                @if (!string.IsNullOrEmpty(Model.Notes))
+                {
+                    <div>
+                        <label class="text-muted mb-1">Ghi chú</label>
+                        <p class="mb-0">@Model.Notes</p>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <!-- Car Information -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Thông tin xe</h5>
+            </div>
+            <div class="card-body">
+                <div class="d-flex">
+                    @if (ViewBag.CarImageUrl != null)
+                    {
+                        <img src="@ViewBag.CarImageUrl" alt="@Model.Car?.Name" class="rounded me-3" style="width: 150px; height: 100px; object-fit: cover;">
+                    }
+                    else
+                    {
+                        <div class="bg-light rounded me-3 d-flex align-items-center justify-content-center" style="width: 150px; height: 100px;">
+                            <i class="fas fa-car fa-3x text-muted"></i>
+                        </div>
+                    }
+                    <div>
+                        <h5 class="mb-2">@Model.Car?.Name</h5>
+                        <p class="mb-1 text-muted">
+                            <i class="fas fa-tag me-2"></i>@Model.Car?.Brand?.Name - @Model.Car?.Category?.Name
+                        </p>
+                        <p class="mb-1 text-muted">
+                            <i class="fas fa-palette me-2"></i>Màu: @Model.Car?.Color
+                        </p>
+                        <p class="mb-0 text-muted">
+                            <i class="fas fa-calendar-alt me-2"></i>Năm: @Model.Car?.Year
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Customer Information -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Thông tin khách hàng</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <label class="text-muted mb-1">Họ tên</label>
+                        <p class="mb-3">@(Model.Renter?.FullName ?? "Chưa cập nhật")</p>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="text-muted mb-1">Email</label>
+                        <p class="mb-3">@Model.Renter?.Email</p>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="text-muted mb-1">Số điện thoại</label>
+                        <p class="mb-0">@(Model.Renter?.PhoneNumber ?? "Chưa cập nhật")</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Payment History -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Lịch sử thanh toán</h5>
+            </div>
+            <div class="card-body">
+                @if (ViewBag.Payments != null && ViewBag.Payments.Count > 0)
+                {
+                    <div class="table-responsive">
+                        <table class="modern-table">
+                            <thead>
+                                <tr>
+                                    <th>Ngày</th>
+                                    <th>Loại</th>
+                                    <th>Phương thức</th>
+                                    <th>Số tiền</th>
+                                    <th>Trạng thái</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var payment in ViewBag.Payments)
+                                {
+                                    <tr>
+                                        <td>@(payment.PaymentDate?.ToString("dd/MM/yyyy HH:mm") ?? "Chưa thanh toán")</td>
+                                        <td>@ViewBag.GetPaymentTypeText(payment.PaymentType)</td>
+                                        <td>@ViewBag.GetPaymentMethodText(payment.PaymentMethod)</td>
+                                        <td>@payment.Amount.ToString("N0") VNĐ</td>
+                                        <td>
+                                            @{
+                                                var paymentStatusClass = payment.Status switch
+                                                {
+                                                    carrentalmvc.Models.Enums.PaymentStatus.Completed => "success",
+                                                    carrentalmvc.Models.Enums.PaymentStatus.Pending => "warning",
+                                                    carrentalmvc.Models.Enums.PaymentStatus.Failed => "danger",
+                                                    carrentalmvc.Models.Enums.PaymentStatus.Cancelled => "secondary",
+                                                    _ => "secondary"
+                                                };
+                                            }
+                                            <span class="status-badge @paymentStatusClass">
+                                                @ViewBag.GetPaymentStatusText(payment.Status)
+                                            </span>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+                else
+                {
+                    <div class="empty-state">
+                        <i class="fas fa-receipt empty-state-icon"></i>
+                        <h5>Chưa có thanh toán</h5>
+                        <p>Khách hàng chưa thực hiện thanh toán nào.</p>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+
+    <!-- Right Column: Summary & Actions -->
+    <div class="col-lg-4">
+        <!-- Financial Summary -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Tổng quan tài chính</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="text-muted mb-1">Tiền thuê xe</label>
+                    <p class="mb-0 fw-bold fs-5 text-primary">@Model.TotalPrice.ToString("N0") VNĐ</p>
+                </div>
+
+                <div class="mb-3">
+                    <label class="text-muted mb-1">Đã thanh toán</label>
+                    <p class="mb-0 fw-semibold text-success">@ViewBag.TotalPaid.ToString("N0") VNĐ</p>
+                </div>
+
+                <div class="mb-3">
+                    <label class="text-muted mb-1">Còn lại</label>
+                    <p class="mb-0 fw-semibold text-danger">@ViewBag.RemainingAmount.ToString("N0") VNĐ</p>
+                </div>
+
+                @if (ViewBag.HasPendingPayments)
+                {
+                    <div class="alert alert-warning mb-0">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        Có thanh toán đang chờ xác nhận
+                    </div>
+                }
+            </div>
+        </div>
+
+        <!-- Timeline -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Lịch sử trạng thái</h5>
+            </div>
+            <div class="card-body">
+                <div class="timeline">
+                    <div class="timeline-item">
+                        <div class="timeline-marker bg-primary"></div>
+                        <div class="timeline-content">
+                            <h6>Đơn thuê được tạo</h6>
+                            <small class="text-muted">@Model.CreatedAt.ToString("dd/MM/yyyy HH:mm")</small>
+                        </div>
+                    </div>
+                    @if (Model.Status >= carrentalmvc.Models.Enums.RentalStatus.Confirmed)
+                    {
+                        <div class="timeline-item">
+                            <div class="timeline-marker bg-info"></div>
+                            <div class="timeline-content">
+                                <h6>Đã xác nhận</h6>
+                                <small class="text-muted">@Model.UpdatedAt.ToString("dd/MM/yyyy HH:mm")</small>
+                            </div>
+                        </div>
+                    }
+                    @if (Model.Status >= carrentalmvc.Models.Enums.RentalStatus.Active)
+                    {
+                        <div class="timeline-item">
+                            <div class="timeline-marker bg-success"></div>
+                            <div class="timeline-content">
+                                <h6>Đang thuê</h6>
+                                <small class="text-muted">@(Model.PickupDate?.ToString("dd/MM/yyyy HH:mm") ?? Model.UpdatedAt.ToString("dd/MM/yyyy HH:mm"))</small>
+                            </div>
+                        </div>
+                    }
+                    @if (Model.Status == carrentalmvc.Models.Enums.RentalStatus.Completed)
+                    {
+                        <div class="timeline-item">
+                            <div class="timeline-marker bg-primary"></div>
+                            <div class="timeline-content">
+                                <h6>Hoàn thành</h6>
+                                <small class="text-muted">@(Model.ReturnDate?.ToString("dd/MM/yyyy HH:mm") ?? Model.UpdatedAt.ToString("dd/MM/yyyy HH:mm"))</small>
+                            </div>
+                        </div>
+                    }
+                    @if (Model.Status == carrentalmvc.Models.Enums.RentalStatus.Cancelled)
+                    {
+                        <div class="timeline-item">
+                            <div class="timeline-marker bg-danger"></div>
+                            <div class="timeline-content">
+                                <h6>Đã hủy</h6>
+                                <small class="text-muted">@Model.UpdatedAt.ToString("dd/MM/yyyy HH:mm")</small>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Thao tác</h5>
+            </div>
+            <div class="card-body">
+                <div class="action-buttons">
+                    @if (ViewBag.CanConfirm)
+                    {
+                        <form asp-action="Confirm" method="post" class="d-inline">
+                            <input type="hidden" name="id" value="@Model.RentalId" />
+                            <button type="submit" class="btn-modern btn-success w-100 mb-2" onclick="return confirm('Xác nhận đơn thuê này?')">
+                                <i class="fas fa-check"></i> Xác nhận đơn
+                            </button>
+                        </form>
+                    }
+
+                    @if (ViewBag.CanStart)
+                    {
+                        <form asp-action="Start" method="post" class="d-inline">
+                            <input type="hidden" name="id" value="@Model.RentalId" />
+                            <button type="submit" class="btn-modern btn-primary w-100 mb-2" onclick="return confirm('Bắt đầu đơn thuê này?')">
+                                <i class="fas fa-play"></i> Bắt đầu thuê
+                            </button>
+                        </form>
+                    }
+
+                    @if (ViewBag.CanComplete)
+                    {
+                        <a asp-action="Complete" asp-route-id="@Model.RentalId" class="btn-modern btn-success w-100 mb-2">
+                            <i class="fas fa-flag-checkered"></i> Hoàn thành
+                        </a>
+                    }
+
+                    @if (ViewBag.CanCancel)
+                    {
+                        <button type="button" class="btn-modern btn-danger w-100 mb-2" data-bs-toggle="modal" data-bs-target="#cancelModal">
+                            <i class="fas fa-times"></i> Hủy đơn
+                        </button>
+                    }
+
+                    <a asp-controller="Payments" asp-action="Index" asp-route-rentalId="@Model.RentalId" class="btn-modern btn-secondary w-100">
+                        <i class="fas fa-credit-card"></i> Xem thanh toán
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Cancel Modal -->
+<div class="modal fade" id="cancelModal" tabindex="-1" aria-labelledby="cancelModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form asp-action="Cancel" method="post">
+                <input type="hidden" name="id" value="@Model.RentalId" />
+                <div class="modal-header">
+                    <h5 class="modal-title" id="cancelModalLabel">Hủy đơn thuê</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="reason" class="form-label">Lý do hủy</label>
+                        <textarea class="form-control" id="reason" name="reason" rows="3" placeholder="Nhập lý do hủy đơn..."></textarea>
+                    </div>
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        Bạn có chắc chắn muốn hủy đơn thuê này?
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+                    <button type="submit" class="btn btn-danger">Xác nhận hủy</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Styles {
+    <style>
+        .timeline {
+            position: relative;
+            padding-left: 30px;
+        }
+
+        .timeline-item {
+            position: relative;
+            padding-bottom: 20px;
+        }
+
+        .timeline-item:not(:last-child)::before {
+            content: '';
+            position: absolute;
+            left: -23px;
+            top: 20px;
+            width: 2px;
+            height: calc(100% - 10px);
+            background-color: #e9ecef;
+        }
+
+        .timeline-marker {
+            position: absolute;
+            left: -30px;
+            top: 5px;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            border: 2px solid #fff;
+            box-shadow: 0 0 0 2px #f8f9fa;
+        }
+
+        .timeline-content h6 {
+            margin: 0;
+            font-size: 0.9rem;
+            font-weight: 600;
+        }
+
+        .timeline-content small {
+            color: #6c757d;
+        }
+    </style>
+}

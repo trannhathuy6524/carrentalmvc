@@ -1,0 +1,536 @@
+﻿@using carrentalmvc.Models.Enums
+@model carrentalmvc.Models.Model3DTemplate
+@{
+    ViewData["Title"] = "Chỉnh sửa mô hình 3D";
+    var currentModelUrl = ViewBag.CurrentModelUrl as string ?? Model.ModelUrl;
+    var currentPreviewImageUrl = ViewBag.CurrentPreviewImageUrl as string ?? Model.PreviewImageUrl;
+    var currentFileSize = ViewBag.CurrentFileSize != null ? (long)ViewBag.CurrentFileSize : (Model.FileSize ?? 0L);
+}
+<script type="module" src="https://unpkg.com/@@google/model-viewer@@3.3.0/dist/model-viewer.min.js"></script>
+
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2"><i class="fas fa-edit"></i> Chỉnh sửa mô hình 3D</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <div class="btn-group">
+            <a asp-action="Details" asp-route-id="@Model.TemplateId" class="btn btn-sm btn-outline-info">
+                <i class="fas fa-eye"></i> Xem chi tiết
+            </a>
+            <a asp-action="Index" class="btn btn-sm btn-outline-secondary">
+                <i class="fas fa-arrow-left"></i> Quay lại
+            </a>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Thông tin mô hình 3D</h5>
+            </div>
+            <div class="card-body">
+                <form asp-action="Edit" method="post" enctype="multipart/form-data" id="editTemplateForm">
+                    @Html.AntiForgeryToken()
+                    <input asp-for="TemplateId" type="hidden" />
+
+                    <!-- Preserve current urls as hidden fields (controller reads from DB; these are informational) -->
+                    <input type="hidden" name="CurrentModelUrl" value="@currentModelUrl" />
+                    <input type="hidden" name="CurrentPreviewImageUrl" value="@currentPreviewImageUrl" />
+
+                    <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="form-group mb-3">
+                                <label asp-for="Name" class="form-label"></label>
+                                <input asp-for="Name" class="form-control" placeholder="Nhập tên mô hình 3D" />
+                                <span asp-validation-for="Name" class="text-danger"></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group mb-3">
+                        <label asp-for="Description" class="form-label"></label>
+                        <textarea asp-for="Description" class="form-control" rows="3" placeholder="Mô tả chi tiết về mô hình 3D"></textarea>
+                        <span asp-validation-for="Description" class="text-danger"></span>
+                    </div>
+
+                    <!-- 3D Model File Upload Section -->
+                    <div class="card mb-3">
+                        <div class="card-header">
+                            <h6 class="card-title mb-0">
+                                <i class="fas fa-cube"></i> File mô hình 3D
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <!-- Current Model Info -->
+                            @if (!string.IsNullOrEmpty(currentModelUrl))
+                            {
+                                <div class="alert alert-info mb-3">
+                                    <h6><i class="fas fa-info-circle"></i> Mô hình hiện tại:</h6>
+                                    <div class="input-group">
+                                        <input type="text" class="form-control" value="@currentModelUrl" readonly />
+                                        <a href="@currentModelUrl" target="_blank" class="btn btn-outline-primary">
+                                            <i class="fas fa-external-link-alt"></i> Mở
+                                        </a>
+                                    </div>
+                                </div>
+                            }
+
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-group mb-3">
+                                        <label for="modelFile" class="form-label">Tải lên file mô hình 3D mới</label>
+                                        <input type="file" id="modelFile" name="ModelFile" class="form-control"
+                                               accept=".glb,.gltf,.obj,.fbx" />
+                                        <div class="form-text">
+                                            <i class="fas fa-info-circle text-info"></i>
+                                            Định dạng hỗ trợ: GLB, GLTF, OBJ, FBX - Tối đa 100MB
+                                        </div>
+                                        <div id="modelFileInfo" class="mt-2"></div>
+                                    </div>
+
+                                    <div class="text-center my-2">
+                                        <span class="text-muted">hoặc</span>
+                                    </div>
+
+                                    <div class="form-group mb-3">
+                                        <label asp-for="ModelUrl" class="form-label">URL mô hình 3D</label>
+                                        <input asp-for="ModelUrl" class="form-control" placeholder="https://example.com/model.glb" />
+                                        <span asp-validation-for="ModelUrl" class="text-danger"></span>
+                                        <div class="form-text">Nhập URL trực tiếp để thay thế mô hình hiện tại</div>
+                                    </div>
+                                </div>
+
+                                <div class="col-md-6">
+                                    <div class="form-group mb-3">
+                                        <label asp-for="FileFormat" class="form-label">Định dạng file</label>
+                                        <select asp-for="FileFormat" class="form-select" id="fileFormatSelect"
+                                                asp-items="@(Html.GetEnumSelectList<FileFormat>())">
+                                            <option value="">Chọn định dạng</option>
+                                        </select>
+                                        <span asp-validation-for="FileFormat" class="text-danger"></span>
+                                    </div>
+
+                                    <div class="form-group mb-3">
+                                        <label asp-for="FileSize" class="form-label">Kích thước file</label>
+                                        <input asp-for="FileSize" type="number" class="form-control" placeholder="Kích thước (bytes)" readonly />
+                                        <span asp-validation-for="FileSize" class="text-danger"></span>
+                                        <div class="form-text">Sẽ tự động cập nhật khi chọn file</div>
+                                    </div>
+
+                                    @if (!string.IsNullOrEmpty(currentModelUrl))
+                                    {
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="keepCurrentModel" checked />
+                                            <label class="form-check-label" for="keepCurrentModel">
+                                                Giữ mô hình hiện tại
+                                            </label>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Preview Image Upload Section -->
+                    <div class="card mb-3">
+                        <div class="card-header">
+                            <h6 class="card-title mb-0">
+                                <i class="fas fa-image"></i> Ảnh đại diện
+                                <span class="badge bg-info">Tùy chọn</span>
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <!-- Current Preview Image -->
+                            @if (!string.IsNullOrEmpty(currentPreviewImageUrl))
+                            {
+                                <div class="alert alert-info mb-3">
+                                    <h6><i class="fas fa-info-circle"></i> Ảnh đại diện hiện tại:</h6>
+                                    <div class="text-center mb-2">
+                                        <img src="@currentPreviewImageUrl" alt="Current preview"
+                                             class="img-fluid rounded" style="max-height: 150px;" />
+                                    </div>
+                                    <div class="input-group">
+                                        <input type="text" class="form-control" value="@currentPreviewImageUrl" readonly />
+                                        <a href="@currentPreviewImageUrl" target="_blank" class="btn btn-outline-primary">
+                                            <i class="fas fa-external-link-alt"></i> Mở
+                                        </a>
+                                    </div>
+                                </div>
+                            }
+
+                            <div class="row">
+                                <div class="col-md-8">
+                                    <div class="form-group mb-3">
+                                        <label for="previewImageFile" class="form-label">Tải lên ảnh đại diện mới</label>
+                                        <input type="file" id="previewImageFile" name="PreviewImageFile" class="form-control" accept="image/*" />
+                                        <div class="form-text">
+                                            <i class="fas fa-info-circle text-info"></i>
+                                            Kích thước khuyến nghị: 400x300px, định dạng: JPG, PNG, tối đa 5MB
+                                        </div>
+                                    </div>
+
+                                    <div class="text-center my-2">
+                                        <span class="text-muted">hoặc</span>
+                                    </div>
+
+                                    <div class="form-group mb-3">
+                                        <label asp-for="PreviewImageUrl" class="form-label">URL ảnh đại diện</label>
+                                        <input asp-for="PreviewImageUrl" class="form-control" placeholder="https://example.com/preview.jpg" />
+                                        <span asp-validation-for="PreviewImageUrl" class="text-danger"></span>
+                                        <div class="form-text">Nhập URL trực tiếp để thay thế ảnh hiện tại</div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="preview-container">
+                                        <label class="form-label">Xem trước</label>
+                                        <div id="imagePreview" class="border rounded p-3 text-center" style="height: 150px; background: #f8f9fa;">
+                                            @if (!string.IsNullOrEmpty(currentPreviewImageUrl))
+                                            {
+                                                <img src="@currentPreviewImageUrl" alt="Preview" class="img-fluid rounded" style="max-height: 140px;" />
+                                            }
+                                            else
+                                            {
+                                                <i class="fas fa-image fa-2x text-muted mb-2"></i>
+                                                <div class="text-muted small">Chọn ảnh để xem trước</div>
+                                            }
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group mb-3">
+                                <label asp-for="BrandId" class="form-label"></label>
+                                <select asp-for="BrandId" asp-items="ViewBag.Brands" class="form-select">
+                                    <option value="">Không chọn thương hiệu</option>
+                                </select>
+                                <span asp-validation-for="BrandId" class="text-danger"></span>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group mb-3">
+                                <label asp-for="CategoryId" class="form-label"></label>
+                                <select asp-for="CategoryId" asp-items="ViewBag.Categories" class="form-select">
+                                    <option value="">Không chọn loại xe</option>
+                                </select>
+                                <span asp-validation-for="CategoryId" class="text-danger"></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-check mb-3">
+                        <input asp-for="IsActive" class="form-check-input" />
+                        <label asp-for="IsActive" class="form-check-label">
+                            Kích hoạt mô hình 3D
+                        </label>
+                        <div class="form-text">Mô hình 3D sẽ có thể được sử dụng bởi chủ xe</div>
+                    </div>
+
+                    <div class="d-flex justify-content-end">
+                        <a asp-action="Index" class="btn btn-secondary me-2">Hủy</a>
+                        <button type="submit" class="btn btn-primary" id="submitBtn">
+                            <span class="spinner-border spinner-border-sm me-2" role="status" id="submitSpinner" style="display: none;"></span>
+                            <i class="fas fa-save me-2" id="submitIcon"></i>Cập nhật mô hình 3D
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <!-- 3D Model Preview -->
+        @if (Model.FileFormat == FileFormat.GLB || Model.FileFormat == FileFormat.GLTF)
+        {
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h6 class="card-title mb-0">
+                        <i class="fas fa-cube"></i> Xem trước mô hình 3D
+                        <span class="badge bg-success ms-2">@Model.FileFormat</span>
+                    </h6>
+                </div>
+                <div class="card-body p-0">
+                    <div style="height: 300px;">
+                        @await Html.PartialAsync("_Model3DViewer", currentModelUrl ?? Model.ModelUrl)
+                    </div>
+                </div>
+                <div class="card-footer text-muted small">
+                    <i class="fas fa-mouse"></i> Sử dụng chuột để xoay, phóng to/thu nhỏ
+                </div>
+            </div>
+        }
+
+        <div class="card mb-3">
+            <div class="card-header">
+                <h6 class="card-title mb-0">Hướng dẫn</h6>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-warning">
+                    <small><i class="fas fa-exclamation-triangle"></i> <strong>Lưu ý:</strong> Thay đổi mô hình có thể ảnh hưởng đến các xe đang sử dụng template này.</small>
+                </div>
+
+                <div class="mt-3">
+                    <h6>Định dạng hỗ trợ:</h6>
+                    <ul class="list-unstyled">
+                        <li><span class="badge bg-success me-2">GLB</span> Tương tác 3D + AR</li>
+                        <li><span class="badge bg-success me-2">GLTF</span> Tương tác 3D + AR</li>
+                        <li><span class="badge bg-warning me-2">OBJ</span> Chỉ ảnh đại diện</li>
+                        <li><span class="badge bg-warning me-2">FBX</span> Chỉ ảnh đại diện</li>
+                    </ul>
+                </div>
+
+                <div class="mt-3">
+                    <h6>Kích thước khuyến nghị:</h6>
+                    <ul class="list-unstyled small">
+                        <li><strong>Ảnh đại diện:</strong> 400x300px</li>
+                        <li><strong>Mô hình 3D:</strong> &lt; 100MB</li>
+                        <li><strong>Định dạng ảnh:</strong> JPG, PNG</li>
+                    </ul>
+                </div>
+
+                <div class="mt-3">
+                    <h6>Lưu ý về file:</h6>
+                    <ul class="list-unstyled small">
+                        <li><i class="fas fa-check text-success me-1"></i> Upload file sẽ thay thế file cũ</li>
+                        <li><i class="fas fa-check text-success me-1"></i> URL sẽ ghi đè file upload</li>
+                        <li><i class="fas fa-check text-success me-1"></i> Để trống để giữ file hiện tại</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+
+            // Initialize form handling
+            initializeFileUpload();
+            initializeImagePreview();
+            initializeFormSubmission();
+
+            // ===== FILE UPLOAD FUNCTIONALITY =====
+            function initializeFileUpload() {
+                const modelFileInput = document.getElementById('modelFile');
+                const modelUrlInput = document.querySelector('input[name="ModelUrl"]');
+                const fileFormatSelect = document.getElementById('fileFormatSelect');
+                const fileSizeInput = document.querySelector('input[name="FileSize"]');
+                const modelFileInfo = document.getElementById('modelFileInfo');
+                const keepCurrentModelCheckbox = document.getElementById('keepCurrentModel');
+
+                // Handle 3D model file upload
+                if (modelFileInput) {
+                    modelFileInput.addEventListener('change', function(e) {
+                        const file = e.target.files[0];
+                        if (file) {
+                            // Update file size
+                            fileSizeInput.value = file.size;
+
+                            // Auto-detect format from file extension
+                            const extension = file.name.split('.').pop().toLowerCase();
+
+                            switch(extension) {
+                                case 'glb':
+                                    fileFormatSelect.value = '@((int)FileFormat.GLB)';
+                                    break;
+                                case 'gltf':
+                                    fileFormatSelect.value = '@((int)FileFormat.GLTF)';
+                                    break;
+                                case 'obj':
+                                    fileFormatSelect.value = '@((int)FileFormat.OBJ)';
+                                    break;
+                                case 'fbx':
+                                    fileFormatSelect.value = '@((int)FileFormat.FBX)';
+                                    break;
+                            }
+
+                            // Show file info
+                            const fileSize = (file.size / (1024 * 1024)).toFixed(2);
+                            modelFileInfo.innerHTML =
+                                '<div class="alert alert-success small">' +
+                                '<i class="fas fa-file-alt me-1"></i> ' +
+                                '<strong>' + file.name + '</strong><br>' +
+                                'Kích thước: ' + fileSize + ' MB<br>' +
+                                'Định dạng: ' + extension.toUpperCase() +
+                                '</div>';
+
+                            // Clear URL input when file is selected
+                            modelUrlInput.value = '';
+
+                            // Uncheck keep current model
+                            if (keepCurrentModelCheckbox) {
+                                keepCurrentModelCheckbox.checked = false;
+                            }
+
+                            // Validate file size (100MB limit)
+                            if (file.size > 100 * 1024 * 1024) {
+                                modelFileInfo.innerHTML =
+                                    '<div class="alert alert-danger small">' +
+                                    '<i class="fas fa-exclamation-triangle me-1"></i> ' +
+                                    'File quá lớn! Vui lòng chọn file dưới 100MB.' +
+                                    '</div>';
+                                modelFileInput.value = '';
+                                return;
+                            }
+                        }
+                    });
+                }
+
+                // Handle model URL input
+                if (modelUrlInput) {
+                    modelUrlInput.addEventListener('input', function(e) {
+                        const url = e.target.value;
+                        if (url) {
+                            // Clear file input when URL is entered
+                            if (modelFileInput) {
+                                modelFileInput.value = '';
+                                modelFileInfo.innerHTML = '';
+                                fileSizeInput.value = '';
+                            }
+
+                            // Uncheck keep current model
+                            if (keepCurrentModelCheckbox) {
+                                keepCurrentModelCheckbox.checked = false;
+                            }
+
+                            // Try to detect format from URL
+                            const extension = url.split('.').pop().toLowerCase();
+
+                            switch(extension) {
+                                case 'glb':
+                                    fileFormatSelect.value = '@((int)FileFormat.GLB)';
+                                    break;
+                                case 'gltf':
+                                    fileFormatSelect.value = '@((int)FileFormat.GLTF)';
+                                    break;
+                                case 'obj':
+                                    fileFormatSelect.value = '@((int)FileFormat.OBJ)';
+                                    break;
+                                case 'fbx':
+                                    fileFormatSelect.value = '@((int)FileFormat.FBX)';
+                                    break;
+                            }
+                        }
+                    });
+                }
+
+                // Handle keep current model checkbox
+                if (keepCurrentModelCheckbox) {
+                    keepCurrentModelCheckbox.addEventListener('change', function() {
+                        if (this.checked) {
+                            // Clear new inputs when keeping current
+                            if (modelFileInput) modelFileInput.value = '';
+                            modelUrlInput.value = '';
+                            modelFileInfo.innerHTML = '';
+                            fileSizeInput.value = '@currentFileSize';
+                        }
+                    });
+                }
+            }
+
+            // ===== IMAGE PREVIEW FUNCTIONALITY =====
+            function initializeImagePreview() {
+                const previewImageFile = document.getElementById('previewImageFile');
+                const previewImageUrl = document.querySelector('input[name="PreviewImageUrl"]');
+                const imagePreview = document.getElementById('imagePreview');
+
+                // Preview uploaded image
+                if (previewImageFile) {
+                    previewImageFile.addEventListener('change', function(e) {
+                        const file = e.target.files[0];
+                        if (file) {
+                            // Validate file size (5MB limit)
+                            if (file.size > 5 * 1024 * 1024) {
+                                showToast('error', 'File ảnh quá lớn! Vui lòng chọn file dưới 5MB.');
+                                this.value = '';
+                                return;
+                            }
+
+                            const reader = new FileReader();
+                            reader.onload = function(e) {
+                                imagePreview.innerHTML =
+                                    '<img src="' + e.target.result + '" class="img-fluid rounded" style="max-height: 140px; object-fit: cover;">';
+                            };
+                            reader.readAsDataURL(file);
+
+                            // Clear URL input when file is selected
+                            previewImageUrl.value = '';
+                        }
+                    });
+                }
+
+                // Preview URL image
+                if (previewImageUrl) {
+                    previewImageUrl.addEventListener('input', function(e) {
+                        const url = e.target.value;
+                        if (url) {
+                            const img = new Image();
+                            img.onload = function() {
+                                imagePreview.innerHTML =
+                                    '<img src="' + url + '" class="img-fluid rounded" style="max-height: 140px; object-fit: cover;">';
+                            };
+                            img.onerror = function() {
+                                imagePreview.innerHTML =
+                                    '<i class="fas fa-exclamation-triangle fa-2x text-warning mb-2"></i><div class="text-warning small">URL ảnh không hợp lệ</div>';
+                            };
+                            img.src = url;
+
+                            // Clear file input when URL is entered
+                            if (previewImageFile) previewImageFile.value = '';
+                        }
+                    });
+                }
+            }
+
+            // ===== FORM SUBMISSION =====
+            function initializeFormSubmission() {
+                const form = document.getElementById('editTemplateForm');
+                const submitBtn = document.getElementById('submitBtn');
+                const submitSpinner = document.getElementById('submitSpinner');
+                const submitIcon = document.getElementById('submitIcon');
+
+                form.addEventListener('submit', function(e) {
+                    // Show loading state
+                    submitBtn.disabled = true;
+
+                    if (submitSpinner) submitSpinner.style.display = 'inline-block';
+                    if (submitIcon) submitIcon.style.display = 'none';
+
+                    submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Đang cập nhật...';
+
+                    // Form will submit normally, loading state will be cleared on page change
+                });
+            }
+
+            // ===== UTILITY FUNCTIONS =====
+            function showToast(type, message) {
+                const toastClass = type === 'success' ? 'alert-success' : 'alert-danger';
+                const icon = type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle';
+
+                const toast = document.createElement('div');
+                toast.className = `alert ${toastClass} position-fixed top-0 end-0 m-3`;
+                toast.style.zIndex = '9999';
+                toast.style.minWidth = '300px';
+                toast.innerHTML = `<i class="fas ${icon} me-2"></i>${message}`;
+
+                document.body.appendChild(toast);
+
+                setTimeout(() => {
+                    toast.style.opacity = '0';
+                    toast.style.transition = 'opacity 0.3s';
+                    setTimeout(() => toast.remove(), 300);
+                }, 3000);
+            }
+        });
+    </script>
+}

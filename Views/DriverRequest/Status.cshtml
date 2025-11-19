@@ -1,0 +1,159 @@
+@model IEnumerable<DriverRequest>
+@{
+    ViewData["Title"] = "Trạng thái yêu cầu tài xế";
+}
+
+<div class="container py-5">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>
+            <i class="fas fa-list-alt"></i> @ViewData["Title"]
+        </h2>
+        <a asp-action="Create" class="btn btn-primary">
+            <i class="fas fa-plus"></i> Gửi yêu cầu mới
+        </a>
+    </div>
+
+    @if (!Model.Any())
+    {
+        <div class="alert alert-info">
+            <i class="fas fa-info-circle"></i>
+            Bạn chưa có yêu cầu nào. 
+            <a asp-action="Create" class="alert-link">Tạo yêu cầu làm tài xế</a>
+        </div>
+    }
+    else
+    {
+        @foreach (var request in Model)
+        {
+            <div class="card mb-3 shadow-sm">
+                <div class="card-header bg-light">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h5 class="mb-0">
+                                Yêu cầu #@request.DriverRequestId
+                                @if (request.Status == DriverRequestStatus.Pending)
+                                {
+                                    <span class="badge bg-warning text-dark ms-2">
+                                        <i class="fas fa-clock"></i> Chờ duyệt
+                                    </span>
+                                }
+                                else if (request.Status == DriverRequestStatus.Approved)
+                                {
+                                    <span class="badge bg-success ms-2">
+                                        <i class="fas fa-check"></i> Đã duyệt
+                                    </span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-danger ms-2">
+                                        <i class="fas fa-times"></i> Từ chối
+                                    </span>
+                                }
+                            </h5>
+                            <small class="text-muted">
+                                Gửi lúc: @request.RequestedAt.ToString("dd/MM/yyyy HH:mm")
+                            </small>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p class="mb-2">
+                                <strong>Chủ xe:</strong> @request.CarOwner.FullName
+                            </p>
+                            <p class="mb-2">
+                                <strong>Số điện thoại:</strong> @request.CarOwner.PhoneNumber
+                            </p>
+                            <p class="mb-2">
+                                <strong>GPLX:</strong> @request.DriverLicense
+                            </p>
+                            @if (!string.IsNullOrEmpty(request.Experience))
+                            {
+                                <p class="mb-2">
+                                    <strong>Kinh nghiệm:</strong> @request.Experience
+                                </p>
+                            }
+                        </div>
+                        
+                        <div class="col-md-6">
+                            @if (request.ProcessedAt.HasValue)
+                            {
+                                <p class="mb-2">
+                                    <strong>Ngày xử lý:</strong> @request.ProcessedAt.Value.ToString("dd/MM/yyyy HH:mm")
+                                </p>
+                            }
+                            
+                            <!-- ✅ Show fixed salary info -->
+                            <div class="alert alert-info">
+                                <i class="fas fa-money-bill-wave me-2"></i>
+                                <strong>Lương tài xế:</strong> 500,000 VNĐ/ngày<br/>
+                                <small class="text-muted">(≈ 62,500 VNĐ/giờ)</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ❌ REMOVED: Counter offer section -->
+                    <!-- ❌ REMOVED: Agreed fee section -->
+                    
+                    @* ✅ APPROVED *@
+                    @if (request.Status == DriverRequestStatus.Approved)
+                    {
+                        <div class="alert alert-success mt-3 border-success">
+                            <h6 class="alert-heading">
+                                <i class="fas fa-check-circle me-2"></i>
+                                Đã được duyệt làm tài xế!
+                            </h6>
+                            <p class="mb-2">
+                                Bạn đã trở thành tài xế của <strong>@request.CarOwner.FullName</strong>
+                            </p>
+                            <p class="mb-2">
+                                <strong>Lương:</strong> <span class="text-success fs-5">500,000 VNĐ/ngày</span>
+                                <small class="text-muted">(62,500 VNĐ/giờ)</small>
+                            </p>
+                            <div class="mt-3">
+                                <a href="/Driver/Dashboard" class="btn btn-primary">
+                                    <i class="fas fa-arrow-right me-2"></i>
+                                    Đến Dashboard
+                                </a>
+                            </div>
+                        </div>
+                    }
+
+                    @* Rejection reason *@
+                    @if (request.Status == DriverRequestStatus.Rejected && !string.IsNullOrEmpty(request.RejectionReason))
+                    {
+                        <div class="alert alert-danger mt-3 border-danger">
+                            <h6 class="alert-heading">
+                                <i class="fas fa-exclamation-circle me-2"></i>
+                                Lý do từ chối
+                            </h6>
+                            <p class="mb-0">@request.RejectionReason</p>
+                        </div>
+                    }
+
+                    @* Notes *@
+                    @if (!string.IsNullOrEmpty(request.Notes))
+                    {
+                        <div class="mt-3">
+                            <small class="text-muted">
+                                <strong>Ghi chú:</strong> @request.Notes
+                            </small>
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+    }
+</div>
+
+<style>
+    .card {
+        transition: all 0.3s ease;
+    }
+    
+    .card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15) !important;
+    }
+</style>

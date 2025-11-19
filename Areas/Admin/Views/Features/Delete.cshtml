@@ -1,0 +1,131 @@
+﻿@model carrentalmvc.Models.Feature
+@{
+    ViewData["Title"] = $"Xóa tính năng - {Model.Name}";
+}
+
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2 text-danger"><i class="fas fa-trash"></i> Xóa tính năng</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <div class="btn-group">
+            <a asp-action="Details" asp-route-id="@Model.FeatureId" class="btn btn-sm btn-outline-info">
+                <i class="fas fa-eye"></i> Xem chi tiết
+            </a>
+            <a asp-action="Index" class="btn btn-sm btn-outline-secondary">
+                <i class="fas fa-arrow-left"></i> Quay lại
+            </a>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card border-danger">
+            <div class="card-header bg-danger text-white">
+                <h6 class="mb-0"><i class="fas fa-exclamation-triangle"></i> Xác nhận xóa tính năng</h6>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-danger">
+                    <h5><i class="fas fa-exclamation-triangle"></i> Cảnh báo!</h5>
+                    <p>Bạn có chắc chắn muốn xóa tính năng <strong>"@Model.Name"</strong> không?</p>
+                    <p class="mb-0">Hành động này không thể hoàn tác!</p>
+                </div>
+
+                <div class="bg-light p-3 rounded mb-4">
+                    <div class="row align-items-center">
+                        <div class="col-md-3 text-center">
+                            @if (!string.IsNullOrEmpty(Model.Icon))
+                            {
+                                <i class="@( (Model.Icon ?? "fas fa-cog") + " fa-4x text-primary mb-2" )"></i>
+                            }
+                            else
+                            {
+                                <i class="fas fa-cog fa-4x text-muted mb-2"></i>
+                            }
+                        </div>
+                        <div class="col-md-9">
+                            <dl class="row">
+                                <dt class="col-sm-4">Tên tính năng:</dt>
+                                <dd class="col-sm-8"><strong>@Model.Name</strong></dd>
+
+                                <dt class="col-sm-4">Icon:</dt>
+                                <dd class="col-sm-8">
+                                    @if (!string.IsNullOrEmpty(Model.Icon))
+                                    {
+                                        <code>@Model.Icon</code>
+                                    }
+                                    else
+                                    {
+                                        <em class="text-muted">Chưa có icon</em>
+                                    }
+                                </dd>
+
+                                <dt class="col-sm-4">Mô tả:</dt>
+                                <dd class="col-sm-8">
+                                    @if (!string.IsNullOrEmpty(Model.Description))
+                                    {
+                                        @Model.Description
+                                    }
+                                    else
+                                    {
+                                        <em class="text-muted">Chưa có mô tả</em>
+                                    }
+                                </dd>
+
+                                <dt class="col-sm-4">Ngày tạo:</dt>
+                                <dd class="col-sm-8">@Model.CreatedAt.ToString("dd/MM/yyyy HH:mm")</dd>
+                            </dl>
+                        </div>
+                    </div>
+                </div>
+
+                <form asp-action="Delete" asp-route-id="@Model.FeatureId" method="post" class="mt-2">
+                    @Html.AntiForgeryToken()
+                    <input asp-for="FeatureId" type="hidden" />
+                    <div class="d-flex justify-content-between">
+                        <a asp-action="Details" asp-route-id="@Model.FeatureId" class="btn btn-secondary">
+                            <i class="fas fa-times"></i> Hủy
+                        </a>
+                        <button type="submit" class="btn btn-danger"
+                                onclick="return confirm('Bạn có chắc chắn muốn xóa tính năng này?')">
+                            <i class="fas fa-trash"></i> Xóa vĩnh viễn
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card border-info">
+            <div class="card-header bg-info text-white">
+                <h6 class="mb-0"><i class="fas fa-info-circle"></i> Thông tin xóa</h6>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-warning">
+                    <h6><i class="fas fa-exclamation-triangle"></i> Lưu ý</h6>
+                    <p class="mb-0">Sau khi xóa, tính năng này sẽ bị gỡ bỏ khỏi tất cả các xe đang sử dụng.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="card mt-3">
+            <div class="card-header">
+                <h6 class="mb-0">Xem trước</h6>
+            </div>
+            <div class="card-body text-center">
+                <div class="p-3 border rounded">
+                    @if (!string.IsNullOrEmpty(Model.Icon))
+                    {
+                        <i class="@( (Model.Icon ?? "fas fa-cog") + " fa-3x text-primary mb-2" )"></i>
+                    }
+                    else
+                    {
+                        <i class="fas fa-cog fa-3x text-muted mb-2"></i>
+                    }
+                    <h6>@Model.Name</h6>
+                    <p class="text-muted small">@(Model.Description ?? "Mô tả tính năng")</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

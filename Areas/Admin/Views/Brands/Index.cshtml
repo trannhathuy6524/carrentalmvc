@@ -1,0 +1,180 @@
+﻿@using carrentalmvc.Models
+@model IEnumerable<Brand>
+
+@{
+    ViewData["Title"] = "Quản lý thương hiệu";
+
+    var searchTerm = ViewBag.SearchTerm as string ?? "";
+    var pageNumber = (ViewBag.PageNumber as int?) ?? 1;
+    var pageSize = (ViewBag.PageSize as int?) ?? 10;
+    var totalCount = (ViewBag.TotalCount as int?) ?? (Model?.Count() ?? 0);
+    var totalPages = (ViewBag.TotalPages as int?) ?? (int)Math.Ceiling(totalCount / (double)pageSize);
+    var hasPreviousPage = pageNumber > 1;
+    var hasNextPage = pageNumber < totalPages;
+}
+
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2"><i class="fas fa-tags"></i> Quản lý thương hiệu</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <div class="btn-group me-2">
+            <a asp-action="Create" class="btn btn-sm btn-primary">
+                <i class="fas fa-plus"></i> Thêm thương hiệu
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Search -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="get" asp-action="Index">
+            <div class="row">
+                <div class="col-md-8">
+                    <div class="form-group">
+                        <label>Tìm kiếm</label>
+                        <input name="searchTerm" value="@searchTerm" class="form-control" placeholder="Tìm theo tên hoặc mô tả..." />
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label>&nbsp;</label>
+                        <div class="d-flex">
+                            <button type="submit" class="btn btn-primary me-2">
+                                <i class="fas fa-search"></i> Tìm kiếm
+                            </button>
+                            <a asp-action="Index" class="btn btn-outline-secondary">
+                                <i class="fas fa-times"></i> Xóa
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Brands List -->
+<div class="card">
+    <div class="card-header">
+        <div class="d-flex justify-content-between align-items-center">
+            <h6 class="mb-0">Danh sách thương hiệu</h6>
+            <span class="badge bg-primary">Tổng: @totalCount</span>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        @if (Model != null && Model.Any())
+        {
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th style="width: 80px;">Logo</th>
+                            <th>Tên thương hiệu</th>
+                            <th>Mô tả</th>
+                            <th>Số lượng xe</th>
+                            <th>Ngày tạo</th>
+                            <th class="text-center" style="width: 120px;">Thao tác</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var brand in Model)
+                        {
+                            var carCount = brand.Cars?.Count ?? 0;
+                            <tr>
+                                <td class="text-center">
+                                    @if (!string.IsNullOrEmpty(brand.LogoUrl))
+                                    {
+                                        <img src="@brand.LogoUrl" alt="@brand.Name" class="rounded" width="50" height="50" style="object-fit: contain;">
+                                    }
+                                    else
+                                    {
+                                        <div class="bg-light rounded d-flex align-items-center justify-content-center" style="width: 50px; height: 50px;">
+                                            <i class="fas fa-image text-muted"></i>
+                                        </div>
+                                    }
+                                </td>
+                                <td>
+                                    <div class="fw-bold">@brand.Name</div>
+                                </td>
+                                <td>
+                                    <div class="text-muted" style="max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                                        @(brand.Description ?? "Chưa có mô tả")
+                                    </div>
+                                </td>
+                                <td>
+                                    @if (carCount > 0)
+                                    {
+                                        <span class="badge bg-success">@carCount xe</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-secondary">0 xe</span>
+                                    }
+                                </td>
+                                <td>
+                                    <small>@brand.CreatedAt.ToString("dd/MM/yyyy")</small>
+                                </td>
+                                <td class="text-center">
+                                    <div class="btn-group" role="group">
+                                        <a asp-action="Details" asp-route-id="@brand.BrandId"
+                                           class="btn btn-sm btn-outline-primary" title="Xem chi tiết">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                        <a asp-action="Edit" asp-route-id="@brand.BrandId"
+                                           class="btn btn-sm btn-outline-secondary" title="Chỉnh sửa">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                        <a asp-action="Delete" asp-route-id="@brand.BrandId"
+                                           class="btn btn-sm btn-outline-danger" title="Xóa">
+                                            <i class="fas fa-trash"></i>
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Pagination -->
+            @if (totalPages > 1)
+            {
+                <div class="card-footer">
+                    <nav aria-label="Brands pagination">
+                        <ul class="pagination justify-content-center mb-0">
+                            <li class="page-item @(hasPreviousPage ? "" : "disabled")">
+                                <a class="page-link" asp-route-page="@(pageNumber - 1)" asp-route-searchTerm="@searchTerm">
+                                    <i class="fas fa-chevron-left"></i>
+                                </a>
+                            </li>
+
+                            @for (int i = Math.Max(1, pageNumber - 2); i <= Math.Min(totalPages, pageNumber + 2); i++)
+                            {
+                                <li class="page-item @(i == pageNumber ? "active" : "")">
+                                    <a class="page-link" asp-route-page="@i" asp-route-searchTerm="@searchTerm">@i</a>
+                                </li>
+                            }
+
+                            <li class="page-item @(hasNextPage ? "" : "disabled")">
+                                <a class="page-link" asp-route-page="@(pageNumber + 1)" asp-route-searchTerm="@searchTerm">
+                                    <i class="fas fa-chevron-right"></i>
+                                </a>
+                            </li>
+                        </ul>
+                    </nav>
+                </div>
+            }
+        }
+        else
+        {
+            <div class="text-center py-5">
+                <i class="fas fa-tags fa-3x text-muted mb-3"></i>
+                <h5 class="text-muted">Không tìm thấy thương hiệu nào</h5>
+                <p class="text-muted">Thử thay đổi điều kiện tìm kiếm hoặc tạo thương hiệu mới</p>
+                <a asp-action="Create" class="btn btn-primary">
+                    <i class="fas fa-plus"></i> Thêm thương hiệu đầu tiên
+                </a>
+            </div>
+        }
+    </div>
+</div>

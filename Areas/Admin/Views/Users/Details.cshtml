@@ -1,0 +1,251 @@
+﻿@model carrentalmvc.Models.ApplicationUser
+@{
+    ViewData["Title"] = $"Chi tiết người dùng - {Model.FullName}";
+
+    var userAvatar = Model.Avatar;
+    var userName = Model.FullName ?? "N/A";
+    var userEmail = Model.Email ?? "N/A";
+    var userTypeText = ViewBag.UserTypeText as string ?? GetUserTypeText(Model.UserType);
+
+    var totalCars = ViewBag.TotalCars != null ? (int)ViewBag.TotalCars : (Model.Cars?.Count ?? 0);
+    var totalRentals = ViewBag.TotalRentals != null ? (int)ViewBag.TotalRentals : (Model.Rentals?.Count ?? 0);
+    var totalReviews = ViewBag.TotalReviews != null ? (int)ViewBag.TotalReviews : (Model.Reviews?.Count ?? 0);
+}
+
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2"><i class="fas fa-user"></i> Chi tiết người dùng</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <div class="btn-group me-2">
+            <form asp-action="ToggleActive" asp-route-id="@Model.Id" method="post" class="d-inline">
+                @Html.AntiForgeryToken()
+                <button type="submit" class="btn btn-sm btn-@(Model.IsActive ? "warning" : "success")"
+                        onclick="return confirm('@(Model.IsActive ? "Bạn có chắc muốn khóa tài khoản này?" : "Bạn có chắc muốn kích hoạt tài khoản này?")')">
+                    <i class="fas fa-@(Model.IsActive ? "lock" : "unlock")"></i>
+                    @(Model.IsActive ? "Khóa tài khoản" : "Kích hoạt")
+                </button>
+            </form>
+
+            <form asp-action="ToggleVerified" asp-route-id="@Model.Id" method="post" class="d-inline ms-2">
+                @Html.AntiForgeryToken()
+                <button type="submit" class="btn btn-sm btn-@(Model.IsVerified ? "secondary" : "info")"
+                        onclick="return confirm('@(Model.IsVerified ? "Bạn có chắc muốn hủy xác thực tài khoản này?" : "Bạn có chắc muốn xác thực tài khoản này?")')">
+                    <i class="fas fa-@(Model.IsVerified ? "times" : "check")"></i>
+                    @(Model.IsVerified ? "Hủy xác thực" : "Xác thực")
+                </button>
+            </form>
+        </div>
+
+        <div class="btn-group">
+            <a asp-action="Index" class="btn btn-sm btn-outline-secondary">
+                <i class="fas fa-arrow-left"></i> Quay lại
+            </a>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- User Info -->
+    <div class="col-md-4">
+        <div class="card mb-4">
+            <div class="card-body text-center">
+                <div class="avatar mb-3">
+                    @if (!string.IsNullOrEmpty(userAvatar))
+                    {
+                        <img src="@userAvatar" alt="Avatar" class="rounded-circle mb-3" width="120" height="120">
+                    }
+                    else
+                    {
+                        <div class="bg-primary rounded-circle d-flex align-items-center justify-content-center mx-auto mb-3" style="width: 120px; height: 120px;">
+                            <i class="fas fa-user fa-3x text-white"></i>
+                        </div>
+                    }
+                </div>
+
+                <h5 class="card-title">@userName</h5>
+                <p class="text-muted">@userEmail</p>
+
+                <div class="d-flex justify-content-center mb-3">
+                    <span class="badge bg-@(GetUserTypeBadgeClass(Model.UserType)) me-2">@userTypeText</span>
+                    <span class="badge bg-@(Model.IsActive ? "success" : "danger") me-2">@(Model.IsActive ? "Hoạt động" : "Bị khóa")</span>
+                    <span class="badge bg-@(Model.IsVerified ? "info" : "warning")">@(Model.IsVerified ? "Đã xác thực" : "Chưa xác thực")</span>
+                </div>
+
+                @if (Model.UserType == carrentalmvc.Models.Enums.UserType.Owner || Model.UserType == carrentalmvc.Models.Enums.UserType.Customer)
+                {
+                    <div class="row text-center">
+                        @if (Model.UserType == carrentalmvc.Models.Enums.UserType.Owner)
+                        {
+                            <div class="col-4">
+                                <div class="border-end">
+                                    <h6 class="text-primary">@totalCars</h6>
+                                    <small class="text-muted">Xe</small>
+                                </div>
+                            </div>
+                        }
+                        <div class="col-4">
+                            <div class="@(Model.UserType == carrentalmvc.Models.Enums.UserType.Owner ? "border-end" : "")">
+                                <h6 class="text-success">@totalRentals</h6>
+                                <small class="text-muted">Thuê xe</small>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <h6 class="text-warning">@totalReviews</h6>
+                            <small class="text-muted">Đánh giá</small>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0">Thao tác nhanh</h6>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    @if (Model.UserType == carrentalmvc.Models.Enums.UserType.Owner)
+                    {
+                        <a asp-area="Admin" asp-controller="Cars" asp-action="Index" asp-route-ownerId="@Model.Id" class="btn btn-outline-primary btn-sm">
+                            <i class="fas fa-car"></i> Xem xe của chủ này
+                        </a>
+                    }
+
+                    @if (Model.UserType == carrentalmvc.Models.Enums.UserType.Customer)
+                    {
+                        <a asp-area="Admin" asp-controller="Rentals" asp-action="Index" asp-route-userId="@Model.Id" class="btn btn-outline-success btn-sm">
+                            <i class="fas fa-file-contract"></i> Xem lịch sử thuê
+                        </a>
+                    }
+
+                    <a asp-area="Admin" asp-controller="Reviews" asp-action="Index" asp-route-userId="@Model.Id" class="btn btn-outline-warning btn-sm">
+                        <i class="fas fa-star"></i> Xem đánh giá
+                    </a>
+
+                    <hr />
+
+                    <a asp-action="Delete" asp-route-id="@Model.Id" class="btn btn-outline-danger btn-sm">
+                        <i class="fas fa-trash"></i> Xóa tài khoản
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Detailed Info -->
+    <div class="col-md-8">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h6 class="mb-0">Thông tin chi tiết</h6>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <dl class="row">
+                            <dt class="col-sm-4">Họ tên:</dt>
+                            <dd class="col-sm-8">@Model.FullName</dd>
+
+                            <dt class="col-sm-4">Email:</dt>
+                            <dd class="col-sm-8">@Model.Email</dd>
+
+                            <dt class="col-sm-4">Điện thoại:</dt>
+                            <dd class="col-sm-8">@(Model.PhoneNumber ?? "Chưa cập nhật")</dd>
+
+                            <dt class="col-sm-4">Ngày sinh:</dt>
+                            <dd class="col-sm-8">
+                                @if (Model.DateOfBirth.HasValue)
+                                {
+                                    @Model.DateOfBirth.Value.ToString("dd/MM/yyyy")
+                                }
+                                else
+                                {
+                                    <span class="text-muted">Chưa cập nhật</span>
+                                }
+                            </dd>
+                        </dl>
+                    </div>
+
+                    <div class="col-md-6">
+                        <dl class="row">
+                            <dt class="col-sm-4">Địa chỉ:</dt>
+                            <dd class="col-sm-8">@(Model.Address ?? "Chưa cập nhật")</dd>
+
+                            <dt class="col-sm-4">CMND/CCCD:</dt>
+                            <dd class="col-sm-8">@(Model.NationalId ?? "Chưa cập nhật")</dd>
+
+                            <dt class="col-sm-4">GPLX:</dt>
+                            <dd class="col-sm-8">@(Model.DriverLicense ?? "Chưa cập nhật")</dd>
+
+                            <dt class="col-sm-4">Ngày tạo:</dt>
+                            <dd class="col-sm-8">@Model.CreatedAt.ToString("dd/MM/yyyy HH:mm")</dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Activities -->
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0">Hoạt động gần đây</h6>
+            </div>
+            <div class="card-body">
+                @if (Model.UserType == carrentalmvc.Models.Enums.UserType.Owner && totalCars > 0)
+                {
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i>
+                        Chủ xe này có <strong>@totalCars</strong> xe trong hệ thống.
+                        <a asp-area="Admin" asp-controller="Cars" asp-action="Index" asp-route-ownerId="@Model.Id" class="alert-link">Xem danh sách xe</a>
+                    </div>
+                }
+
+                @if (Model.UserType == carrentalmvc.Models.Enums.UserType.Customer && totalRentals > 0)
+                {
+                    <div class="alert alert-success">
+                        <i class="fas fa-check-circle"></i>
+                        Khách hàng này đã thuê <strong>@totalRentals</strong> lần.
+                        <a asp-area="Admin" asp-controller="Rentals" asp-action="Index" asp-route-userId="@Model.Id" class="alert-link">Xem lịch sử thuê</a>
+                    </div>
+                }
+
+                @if (totalReviews > 0)
+                {
+                    <div class="alert alert-warning">
+                        <i class="fas fa-star"></i>
+                        Đã viết <strong>@totalReviews</strong> đánh giá.
+                        <a asp-area="Admin" asp-controller="Reviews" asp-action="Index" asp-route-userId="@Model.Id" class="alert-link">Xem tất cả đánh giá</a>
+                    </div>
+                }
+
+                @if (totalCars == 0 && totalRentals == 0 && totalReviews == 0)
+                {
+                    <p class="text-muted text-center">Chưa có hoạt động nào</p>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@functions {
+    private string GetUserTypeBadgeClass(carrentalmvc.Models.Enums.UserType userType)
+    {
+        return userType switch
+        {
+            carrentalmvc.Models.Enums.UserType.Admin => "danger",
+            carrentalmvc.Models.Enums.UserType.Owner => "warning",
+            carrentalmvc.Models.Enums.UserType.Customer => "primary",
+            _ => "secondary"
+        };
+    }
+
+    private string GetUserTypeText(carrentalmvc.Models.Enums.UserType userType)
+    {
+        return userType switch
+        {
+            carrentalmvc.Models.Enums.UserType.Admin => "Quản trị viên",
+            carrentalmvc.Models.Enums.UserType.Owner => "Chủ xe",
+            carrentalmvc.Models.Enums.UserType.Customer => "Khách hàng",
+            _ => "Không xác định"
+        };
+    }
+}

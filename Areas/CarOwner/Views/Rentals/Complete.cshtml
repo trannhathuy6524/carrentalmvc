@@ -1,0 +1,317 @@
+﻿@using carrentalmvc.Models
+@using carrentalmvc.Models.Enums
+@model Rental
+@{
+    ViewData["Title"] = $"Hoàn thành đơn thuê xe #{Model.RentalId}";
+
+    // Get data from ViewBag
+    var calculatedLateFee = ViewBag.CalculatedLateFee as decimal?;
+}
+
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2"><i class="fas fa-flag-checkered"></i> Hoàn thành đơn thuê xe</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <div class="btn-group">
+            <a asp-action="Details" asp-route-id="@Model.RentalId" class="btn btn-sm btn-outline-info">
+                <i class="fas fa-eye"></i> Xem chi tiết
+            </a>
+            <a asp-action="Index" class="btn btn-sm btn-outline-secondary">
+                <i class="fas fa-arrow-left"></i> Quay lại
+            </a>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0">Hoàn thành đơn thuê xe #@Model.RentalId</h6>
+            </div>
+            <div class="card-body">
+                <form asp-action="Complete" asp-route-id="@Model.RentalId" method="post">
+                    @Html.AntiForgeryToken()
+                    <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+
+                    <!-- Rental Summary -->
+                    <div class="alert alert-info">
+                        <h6><i class="fas fa-info-circle"></i> Thông tin đơn thuê</h6>
+                        <dl class="row mb-0">
+                            <dt class="col-sm-3">Mã đơn:</dt>
+                            <dd class="col-sm-9"><strong>#@Model.RentalId</strong></dd>
+
+                            <dt class="col-sm-3">Xe:</dt>
+                            <dd class="col-sm-9">@(Model.Car?.Name ?? "N/A")</dd>
+
+                            <dt class="col-sm-3">Khách hàng:</dt>
+                            <dd class="col-sm-9">@(Model.Renter?.FullName ?? "N/A")</dd>
+
+                            <dt class="col-sm-3">Ngày bắt đầu:</dt>
+                            <dd class="col-sm-9">@Model.StartDate.ToString("dd/MM/yyyy HH:mm")</dd>
+
+                            <dt class="col-sm-3">Ngày kết thúc:</dt>
+                            <dd class="col-sm-9">@Model.EndDate.ToString("dd/MM/yyyy HH:mm")</dd>
+
+                            <dt class="col-sm-3">Số ngày thuê:</dt>
+                            <dd class="col-sm-9">
+                                <span class="badge bg-info">@((Model.EndDate.Date - Model.StartDate.Date).Days) ngày</span>
+                            </dd>
+
+                            <dt class="col-sm-3">Tổng giá trị:</dt>
+                            <dd class="col-sm-9">
+                                <strong class="text-success">@Model.TotalPrice.ToString("N0") VNĐ</strong>
+                            </dd>
+                        </dl>
+                    </div>
+
+                    <!-- Late Fee Warning -->
+                    @if (calculatedLateFee.HasValue && calculatedLateFee.Value > 0)
+                    {
+                        <div class="alert alert-warning">
+                            <h6><i class="fas fa-exclamation-triangle"></i> Phí trễ hạn</h6>
+                            <p class="mb-0">
+                                Xe được trả muộn so với thời hạn (Hạn: @Model.EndDate.ToString("dd/MM/yyyy HH:mm")).
+                                Phí trễ hạn tự động: <strong>@calculatedLateFee.Value.ToString("N0") VNĐ</strong>
+                            </p>
+                        </div>
+                    }
+                    else if (DateTime.Now > Model.EndDate)
+                    {
+                        <div class="alert alert-info">
+                            <small>
+                                <i class="fas fa-info-circle"></i>
+                                Xe được trả sau thời hạn nhưng không có phí trễ hạn.
+                            </small>
+                        </div>
+                    }
+
+                    <!-- Damage Fee -->
+                    <div class="mb-3">
+                        <label for="damageFee" class="form-label">
+                            Phí hư hỏng <small class="text-muted">(Tùy chọn)</small>
+                        </label>
+                        <div class="input-group">
+                            <input name="damageFee" id="damageFee" class="form-control" type="number" min="0" step="1000"
+                                   placeholder="0" value="0" />
+                            <span class="input-group-text">VNĐ</span>
+                        </div>
+                        <div class="form-text">
+                            Nhập phí hư hỏng nếu xe bị hư hại (để 0 hoặc để trống nếu không có)
+                        </div>
+                    </div>
+
+                    <!-- Completion Notes -->
+                    <div class="mb-3">
+                        <label for="completionNotes" class="form-label">
+                            Ghi chú hoàn thành <small class="text-muted">(Tùy chọn)</small>
+                        </label>
+                        <textarea name="completionNotes" id="completionNotes" class="form-control" rows="4"
+                                  placeholder="Ghi chú về tình trạng xe khi trả, các vấn đề phát sinh (nếu có)..."></textarea>
+                        <div class="form-text">
+                            Mô tả chi tiết tình trạng xe, các hư hỏng, vết xước, hoặc bất kỳ vấn đề nào cần lưu ý.
+                        </div>
+                    </div>
+
+                    <!-- Summary Calculation -->
+                    <div class="card bg-light mb-3">
+                        <div class="card-body">
+                            <h6 class="card-title">Tổng kết thanh toán</h6>
+                            <dl class="row mb-0">
+                                <dt class="col-sm-6">Tổng giá thuê:</dt>
+                                <dd class="col-sm-6 text-end">@Model.TotalPrice.ToString("N0") VNĐ</dd>
+
+                                @if (calculatedLateFee.HasValue && calculatedLateFee.Value > 0)
+                                {
+                                    <dt class="col-sm-6 text-warning">Phí trễ hạn:</dt>
+                                    <dd class="col-sm-6 text-end text-warning">+ @calculatedLateFee.Value.ToString("N0") VNĐ</dd>
+                                }
+
+                                <dt class="col-sm-6 text-danger">Phí hư hỏng:</dt>
+                                <dd class="col-sm-6 text-end text-danger">+ <span id="damageDisplay">0</span> VNĐ</dd>
+
+                                <dt class="col-sm-6"><strong>Tổng cộng:</strong></dt>
+                                <dd class="col-sm-6 text-end">
+                                    <strong class="text-success" id="grandTotal">
+                                        @Model.TotalPrice.ToString("N0") VNĐ
+                                    </strong>
+                                </dd>
+                            </dl>
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-between">
+                        <a asp-action="Details" asp-route-id="@Model.RentalId" class="btn btn-secondary">
+                            <i class="fas fa-times"></i> Hủy
+                        </a>
+                        <button type="submit" class="btn btn-primary" id="submitBtn">
+                            <i class="fas fa-flag-checkered"></i> Hoàn thành đơn thuê
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <!-- Instructions -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="fas fa-question-circle"></i> Hướng dẫn</h6>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-info mb-0">
+                    <h6><i class="fas fa-info-circle"></i> Lưu ý khi hoàn thành</h6>
+                    <ul class="mb-0 small">
+                        <li>Kiểm tra tình trạng xe kỹ lưỡng trước khi xác nhận</li>
+                        <li>Ghi chú rõ ràng các hư hại (nếu có)</li>
+                        <li>Nhập chính xác số tiền phí hư hỏng</li>
+                        <li>Phí trễ hạn đã được tính toán tự động</li>
+                        <li><strong>Sau khi hoàn thành không thể chỉnh sửa</strong></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Late Fee Info -->
+        @if (calculatedLateFee.HasValue && calculatedLateFee.Value > 0)
+        {
+            <div class="card mb-4">
+                <div class="card-header bg-warning text-dark">
+                    <h6 class="mb-0"><i class="fas fa-clock"></i> Phí trễ hạn</h6>
+                </div>
+                <div class="card-body">
+                    <p>Xe được trả muộn so với hạn định.</p>
+                    <dl class="row mb-2">
+                        <dt class="col-sm-6">Hạn trả xe:</dt>
+                        <dd class="col-sm-6">@Model.EndDate.ToString("dd/MM/yyyy HH:mm")</dd>
+
+                        <dt class="col-sm-6">Thời gian trễ:</dt>
+                        <dd class="col-sm-6">
+                            @{
+                                var lateTime = DateTime.Now - Model.EndDate;
+                                if (lateTime.TotalDays >= 1)
+                                {
+                                    <span>@((int)lateTime.TotalDays) ngày</span>
+                                }
+                                else if (lateTime.TotalHours >= 1)
+                                {
+                                    <span>@((int)lateTime.TotalHours) giờ</span>
+                                }
+                                else
+                                {
+                                    <span>@((int)lateTime.TotalMinutes) phút</span>
+                                }
+                            }
+                        </dd>
+
+                        <dt class="col-sm-6">Phí trễ:</dt>
+                        <dd class="col-sm-6"><strong class="text-danger">@calculatedLateFee.Value.ToString("N0") VNĐ</strong></dd>
+                    </dl>
+                    <small class="text-muted">Phí này sẽ được thêm tự động vào tổng thanh toán.</small>
+                </div>
+            </div>
+        }
+
+        <!-- Return Checklist -->
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="fas fa-clipboard-check"></i> Checklist trả xe</h6>
+            </div>
+            <div class="card-body">
+                <div class="form-check mb-2">
+                    <input class="form-check-input" type="checkbox" id="check1">
+                    <label class="form-check-label" for="check1">
+                        <small>Kiểm tra ngoại thất xe (vỏ, kính, gương)</small>
+                    </label>
+                </div>
+                <div class="form-check mb-2">
+                    <input class="form-check-input" type="checkbox" id="check2">
+                    <label class="form-check-label" for="check2">
+                        <small>Kiểm tra nội thất xe (ghế, táp lô, vô lăng)</small>
+                    </label>
+                </div>
+                <div class="form-check mb-2">
+                    <input class="form-check-input" type="checkbox" id="check3">
+                    <label class="form-check-label" for="check3">
+                        <small>Kiểm tra mức nhiên liệu</small>
+                    </label>
+                </div>
+                <div class="form-check mb-2">
+                    <input class="form-check-input" type="checkbox" id="check4">
+                    <label class="form-check-label" for="check4">
+                        <small>Kiểm tra các vật dụng trong xe</small>
+                    </label>
+                </div>
+                <div class="form-check mb-2">
+                    <input class="form-check-input" type="checkbox" id="check5">
+                    <label class="form-check-label" for="check5">
+                        <small>Nhận lại chìa khóa và giấy tờ xe</small>
+                    </label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="check6">
+                    <label class="form-check-label" for="check6">
+                        <small>Xác nhận không có vấn đề gì khác</small>
+                    </label>
+                </div>
+                <hr>
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="checkAll">
+                    <label class="form-check-label fw-bold" for="checkAll">
+                        <small>Tôi đã kiểm tra tất cả</small>
+                    </label>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+
+    <script>
+        $(document).ready(function() {
+            const totalPrice = @Model.TotalPrice;
+            const lateFee = @(calculatedLateFee ?? 0);
+
+            // Update total calculation when damage fee changes
+            $('#damageFee').on('input', function() {
+                const damageFee = parseFloat($(this).val()) || 0;
+                const grandTotal = totalPrice + lateFee + damageFee;
+
+                $('#damageDisplay').text(damageFee.toLocaleString('vi-VN'));
+                $('#grandTotal').text(grandTotal.toLocaleString('vi-VN') + ' VNĐ');
+            });
+
+            // Checklist functionality
+            const checkboxes = $('input[type="checkbox"][id^="check"]:not(#checkAll)');
+            const checkAll = $('#checkAll');
+            const submitBtn = $('#submitBtn');
+
+            // Update "check all" state
+            checkboxes.on('change', function() {
+                const allChecked = checkboxes.length === checkboxes.filter(':checked').length;
+                checkAll.prop('checked', allChecked);
+            });
+
+            // Check/uncheck all
+            checkAll.on('change', function() {
+                checkboxes.prop('checked', $(this).is(':checked'));
+            });
+
+            // Warn if not all checked
+            submitBtn.on('click', function(e) {
+                if (!checkAll.is(':checked')) {
+                    if (!confirm('Bạn chưa hoàn thành tất cả checklist. Bạn có chắc chắn muốn tiếp tục?')) {
+                        e.preventDefault();
+                        return false;
+                    }
+                }
+
+                return confirm('Bạn có chắc chắn muốn hoàn thành đơn thuê xe này? Hành động này không thể hoàn tác!');
+            });
+        });
+    </script>
+}

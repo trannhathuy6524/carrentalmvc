@@ -1,0 +1,775 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - Admin CarRental</title>
+
+    <!-- CSS -->
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/admin.css" asp-append-version="true" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --primary-color: #7c3aed;
+            --primary-dark: #6d28d9;
+            --success-color: #16a34a;
+            --warning-color: #f59e0b;
+            --danger-color: #dc2626;
+            --sidebar-width: 280px;
+            --topbar-height: 70px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc;
+            color: #334155;
+            overflow-x: hidden;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            position: fixed;
+            left: 0;
+            top: 0;
+            width: var(--sidebar-width);
+            height: 100vh;
+            background: linear-gradient(180deg, #581c87 0%, #4c1d95 100%);
+            z-index: 1000;
+            overflow-y: auto;
+            transition: transform 0.3s ease;
+            box-shadow: 4px 0 20px rgba(0, 0, 0, 0.1);
+        }
+
+        .sidebar.collapsed {
+            transform: translateX(-100%);
+        }
+
+        .sidebar-header {
+            padding: 1.5rem 1.25rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .sidebar-brand {
+            color: #ffffff;
+            font-size: 1.25rem;
+            font-weight: 700;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+        }
+
+        .sidebar-brand i {
+            color: #a78bfa;
+            margin-right: 0.75rem;
+            font-size: 1.5rem;
+        }
+
+        .sidebar-nav {
+            padding: 1rem 0;
+        }
+
+        .nav-section {
+            margin-bottom: 2rem;
+        }
+
+        .nav-section-title {
+            color: #94a3b8;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            padding: 0 1.25rem 0.75rem;
+        }
+
+        .nav-item {
+            margin-bottom: 0.25rem;
+        }
+
+        .nav-link {
+            display: flex;
+            align-items: center;
+            padding: 0.75rem 1.25rem;
+            color: #cbd5e1;
+            text-decoration: none;
+            transition: all 0.2s ease;
+            border-left: 3px solid transparent;
+            position: relative;
+        }
+
+        .nav-link:hover {
+            color: #ffffff;
+            background: rgba(167, 139, 250, 0.15);
+            border-left-color: var(--primary-color);
+        }
+
+        .nav-link.active {
+            color: #ffffff;
+            background: rgba(167, 139, 250, 0.2);
+            border-left-color: var(--primary-color);
+            font-weight: 500;
+        }
+
+        .nav-link i {
+            width: 20px;
+            margin-right: 0.75rem;
+            font-size: 1rem;
+        }
+
+        .nav-badge {
+            margin-left: auto;
+            background: var(--danger-color);
+            color: white;
+            font-size: 0.75rem;
+            padding: 0.25rem 0.5rem;
+            border-radius: 12px;
+            font-weight: 500;
+        }
+
+        /* Dropdown Menu in Sidebar */
+        .dropdown-toggle {
+            position: relative;
+        }
+
+        .dropdown-toggle::after {
+            content: '\f107';
+            font-family: 'Font Awesome 6 Free';
+            font-weight: 900;
+            position: absolute;
+            right: 1rem;
+            border: none;
+            margin: 0;
+            transition: transform 0.2s ease;
+        }
+
+        .dropdown-toggle[aria-expanded="true"]::after {
+            transform: rotate(180deg);
+        }
+
+        .collapse .nav-link {
+            padding-left: 3rem;
+            font-size: 0.9rem;
+        }
+
+        /* Main Content */
+        .main-wrapper {
+            margin-left: var(--sidebar-width);
+            min-height: 100vh;
+            transition: margin-left 0.3s ease;
+        }
+
+        .main-wrapper.expanded {
+            margin-left: 0;
+        }
+
+        /* Top Navigation */
+        .topbar {
+            background: #ffffff;
+            height: var(--topbar-height);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 2rem;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            position: sticky;
+            top: 0;
+            z-index: 999;
+        }
+
+        .topbar-left {
+            display: flex;
+            align-items: center;
+        }
+
+        .sidebar-toggle {
+            background: none;
+            border: none;
+            color: #64748b;
+            font-size: 1.25rem;
+            margin-right: 1rem;
+            cursor: pointer;
+            padding: 0.5rem;
+            border-radius: 0.5rem;
+            transition: all 0.2s ease;
+        }
+
+        .sidebar-toggle:hover {
+            background: #f1f5f9;
+            color: var(--primary-color);
+        }
+
+        .breadcrumb-nav {
+            color: #64748b;
+            font-size: 0.875rem;
+        }
+
+        .breadcrumb-nav .active {
+            color: #1e293b;
+            font-weight: 500;
+        }
+
+        .topbar-right {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .user-dropdown {
+            position: relative;
+        }
+
+        .user-avatar {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.5rem 0.75rem;
+            border-radius: 0.75rem;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .user-avatar:hover {
+            background: #f1f5f9;
+            border-color: #cbd5e1;
+        }
+
+        .user-info {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+        }
+
+        .user-name {
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: #1e293b;
+        }
+
+        .user-role {
+            font-size: 0.75rem;
+            color: #64748b;
+        }
+
+        .avatar-img {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: var(--primary-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+        }
+
+        /* Page Content */
+        .page-content {
+            padding: 2rem;
+            min-height: calc(100vh - var(--topbar-height));
+        }
+
+        .page-header {
+            margin-bottom: 2rem;
+        }
+
+        .page-title {
+            font-size: 1.875rem;
+            font-weight: 700;
+            color: #1e293b;
+            margin-bottom: 0.5rem;
+        }
+
+        .page-subtitle {
+            color: #64748b;
+            font-size: 1rem;
+        }
+
+        /* Cards */
+        .card {
+            background: white;
+            border-radius: 1rem;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            border: 1px solid #e2e8f0;
+            margin-bottom: 1.5rem;
+        }
+
+        .card-header {
+            padding: 1.5rem 1.5rem 0;
+            border-bottom: none;
+            background: transparent;
+        }
+
+        .card-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: #1e293b;
+            margin-bottom: 0.25rem;
+        }
+
+        .card-subtitle {
+            color: #64748b;
+            font-size: 0.875rem;
+        }
+
+        .card-body {
+            padding: 1.5rem;
+        }
+
+        /* Alerts */
+        .alert {
+            border-radius: 0.75rem;
+            border: none;
+            padding: 1rem 1.25rem;
+            margin-bottom: 1.5rem;
+            font-weight: 500;
+        }
+
+        .alert-success {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .alert-danger {
+            background: #fef2f2;
+            color: #991b1b;
+        }
+
+        .alert-warning {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .alert-info {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+
+        /* Loading */
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.9);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+        }
+
+        .loading-overlay.show {
+            opacity: 1;
+        }
+
+        .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid #e2e8f0;
+            border-top: 3px solid var(--primary-color);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @@keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Responsive */
+        @@media (max-width: 768px) {
+            .sidebar {
+                transform: translateX(-100%);
+            }
+
+            .sidebar.show {
+                transform: translateX(0);
+            }
+
+            .main-wrapper {
+                margin-left: 0;
+            }
+
+            .page-content {
+                padding: 1rem;
+            }
+
+            .topbar {
+                padding: 0 1rem;
+            }
+        }
+
+        /* Animations */
+        .fade-in {
+            animation: fadeIn 0.3s ease-in;
+        }
+
+        @@keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+    </style>
+
+    @await RenderSectionAsync("Styles", required: false)
+</head>
+<body>
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-spinner"></div>
+    </div>
+
+    <!-- Sidebar -->
+    <nav class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <a href="@Url.Action("Index", "Dashboard", new { area = "Admin" })" class="sidebar-brand">
+                <i class="fas fa-shield-halved"></i>
+                <span>Admin Portal</span>
+            </a>
+        </div>
+
+        <div class="sidebar-nav">
+            <!-- Main Navigation -->
+            <div class="nav-section">
+                <div class="nav-section-title">Tổng quan</div>
+                <div class="nav-item">
+                    <a href="@Url.Action("Index", "Dashboard", new { area = "Admin" })"
+                       class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Dashboard" ? "active" : "")">
+                        <i class="fas fa-chart-pie"></i>
+                        <span>Dashboard</span>
+                    </a>
+                </div>
+            </div>
+
+            <!-- User Management -->
+            <div class="nav-section">
+                <div class="nav-section-title">Quản lý người dùng</div>
+                <div class="nav-item">
+                    <a href="@Url.Action("Index", "Users", new { area = "Admin" })"
+                       class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Users" ? "active" : "")">
+                        <i class="fas fa-users"></i>
+                        <span>Người dùng</span>
+                    </a>
+                </div>
+                <div class="nav-item">
+                    <a href="@Url.Action("Index", "CarOwnerRequests", new { area = "Admin" })"
+                       class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "CarOwnerRequests" ? "active" : "")">
+                        <i class="fas fa-user-check"></i>
+                        <span>Duyệt chủ xe</span>
+                        <span class="nav-badge" id="pendingOwnerCount" style="display: none;">0</span>
+                    </a>
+                </div>
+            </div>
+
+            <!-- Car Management -->
+            <div class="nav-section">
+                <div class="nav-section-title">Quản lý xe</div>
+                <div class="nav-item">
+                    <a href="@Url.Action("Index", "Cars", new { area = "Admin" })"
+                       class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Cars" && ViewContext.RouteData.Values["action"]?.ToString() == "Index" ? "active" : "")">
+                        <i class="fas fa-car"></i>
+                        <span>Danh sách xe</span>
+                    </a>
+                </div>
+                <div class="nav-item">
+                    <a href="@Url.Action("PendingApproval", "Cars", new { area = "Admin" })"
+                       class="nav-link @(ViewContext.RouteData.Values["action"]?.ToString() == "PendingApproval" ? "active" : "")">
+                        <i class="fas fa-hourglass-half"></i>
+                        <span>Xe chờ duyệt</span>
+                        <span class="nav-badge" id="pendingCarsCount" style="display: none;">0</span>
+                    </a>
+                </div>
+            </div>
+
+            <!-- Business Management -->
+            <div class="nav-section">
+                <div class="nav-section-title">Quản lý kinh doanh</div>
+                <div class="nav-item">
+                    <a href="@Url.Action("Index", "Rentals", new { area = "Admin" })"
+                       class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Rentals" ? "active" : "")">
+                        <i class="fas fa-file-contract"></i>
+                        <span>Đơn thuê xe</span>
+                    </a>
+                </div>
+                <div class="nav-item">
+                    <a href="@Url.Action("Index", "Payments", new { area = "Admin" })"
+                       class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Payments" ? "active" : "")">
+                        <i class="fas fa-credit-card"></i>
+                        <span>Thanh toán</span>
+                    </a>
+                </div>
+                <div class="nav-item">
+                    <a href="@Url.Action("Index", "Distributions", new { area = "Admin" })"
+                       class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Distributions" ? "active" : "")">
+                        <i class="fas fa-chart-line"></i>
+                        <span>Phân phối doanh thu</span>
+                    </a>
+                </div>
+                <div class="nav-item">
+                    <a href="@Url.Action("Index", "Reviews", new { area = "Admin" })"
+                       class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Reviews" ? "active" : "")">
+                        <i class="fas fa-star"></i>
+                        <span>Đánh giá</span>
+                    </a>
+                </div>
+            </div>
+
+            <!-- Master Data -->
+            <div class="nav-section">
+                <div class="nav-section-title">Dữ liệu chính</div>
+                <div class="nav-item">
+                    <a href="#masterDataSubmenu" 
+                       data-bs-toggle="collapse" 
+                       aria-expanded="@(new[] { "Brands", "Categories", "Features", "Model3DTemplates" }.Contains(ViewContext.RouteData.Values["Controller"]?.ToString()) ? "true" : "false")"
+                       class="nav-link dropdown-toggle @(new[] { "Brands", "Categories", "Features", "Model3DTemplates" }.Contains(ViewContext.RouteData.Values["Controller"]?.ToString()) ? "active" : "")">
+                        <i class="fas fa-database"></i>
+                        <span>Danh mục</span>
+                    </a>
+                    <ul class="collapse list-unstyled @(new[] { "Brands", "Categories", "Features", "Model3DTemplates" }.Contains(ViewContext.RouteData.Values["Controller"]?.ToString()) ? "show" : "")" id="masterDataSubmenu">
+                        <li class="nav-item">
+                            <a href="@Url.Action("Index", "Brands", new { area = "Admin" })"
+                               class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Brands" ? "active" : "")">
+                                <i class="fas fa-trademark"></i>
+                                <span>Hãng xe</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="@Url.Action("Index", "Categories", new { area = "Admin" })"
+                               class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Categories" ? "active" : "")">
+                                <i class="fas fa-tags"></i>
+                                <span>Loại xe</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="@Url.Action("Index", "Features", new { area = "Admin" })"
+                               class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Features" ? "active" : "")">
+                                <i class="fas fa-puzzle-piece"></i>
+                                <span>Tính năng</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="@Url.Action("Index", "Model3DTemplates", new { area = "Admin" })"
+                               class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Model3DTemplates" ? "active" : "")">
+                                <i class="fas fa-cube"></i>
+                                <span>Mẫu 3D</span>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Settings -->
+            <div class="nav-section">
+                <div class="nav-section-title">Hệ thống</div>
+                <div class="nav-item">
+                    <a href="#" class="nav-link">
+                        <i class="fas fa-cog"></i>
+                        <span>Cài đặt</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="main-wrapper" id="mainWrapper">
+        <!-- Top Navigation Bar -->
+        <header class="topbar">
+            <div class="topbar-left">
+                <button class="sidebar-toggle" id="sidebarToggle">
+                    <i class="fas fa-bars"></i>
+                </button>
+                <nav class="breadcrumb-nav">
+                    <span>@ViewData["Title"]</span>
+                </nav>
+            </div>
+
+            <div class="topbar-right">
+                <!-- Notifications -->
+                <div class="dropdown">
+                    <button class="btn btn-link text-decoration-none position-relative" type="button" data-bs-toggle="dropdown">
+                        <i class="fas fa-bell" style="font-size: 1.25rem; color: #64748b;"></i>
+                        <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size: 0.6rem;">
+                            3
+                        </span>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        <li><h6 class="dropdown-header">Thông báo mới</h6></li>
+                        <li><a class="dropdown-item" href="#"><i class="fas fa-car me-2"></i>Xe mới chờ duyệt</a></li>
+                        <li><a class="dropdown-item" href="#"><i class="fas fa-user me-2"></i>Yêu cầu chủ xe mới</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item text-center" href="#">Xem tất cả</a></li>
+                    </ul>
+                </div>
+
+                <!-- User Menu -->
+                <div class="dropdown">
+                    <div class="user-avatar" data-bs-toggle="dropdown">
+                        <div class="user-info">
+                            <div class="user-name">@User.Identity?.Name</div>
+                            <div class="user-role">Quản trị viên</div>
+                        </div>
+                        <div class="avatar-img">
+                            @(User.Identity?.Name?.First().ToString().ToUpper() ?? "A")
+                        </div>
+                    </div>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        <li>
+                            <a class="dropdown-item" href="#">
+                                <i class="fas fa-user me-2"></i>Hồ sơ cá nhân
+                            </a>
+                        </li>
+                        <li>
+                            <a class="dropdown-item" href="#">
+                                <i class="fas fa-cog me-2"></i>Cài đặt
+                            </a>
+                        </li>
+                        <li>
+                            <a class="dropdown-item" href="@Url.Action("Index", "Home", new { area = "" })">
+                                <i class="fas fa-home me-2"></i>Về trang chủ
+                            </a>
+                        </li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li>
+                            <form asp-area="Identity" asp-page="/Account/Logout" asp-route-returnUrl="@Url.Action("Index", "Home", new { area = "" })" method="post">
+                                <button type="submit" class="dropdown-item">
+                                    <i class="fas fa-sign-out-alt me-2"></i>Đăng xuất
+                                </button>
+                            </form>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </header>
+
+        <!-- Page Content -->
+        <main class="page-content fade-in">
+            <!-- Alert Messages -->
+            @if (TempData["SuccessMessage"] != null)
+            {
+                <div class="alert alert-success alert-dismissible fade show" role="alert">
+                    <i class="fas fa-check-circle me-2"></i>@TempData["SuccessMessage"]
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            }
+
+            @if (TempData["ErrorMessage"] != null)
+            {
+                <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                    <i class="fas fa-exclamation-circle me-2"></i>@TempData["ErrorMessage"]
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            }
+
+            @if (TempData["WarningMessage"] != null)
+            {
+                <div class="alert alert-warning alert-dismissible fade show" role="alert">
+                    <i class="fas fa-exclamation-triangle me-2"></i>@TempData["WarningMessage"]
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            }
+
+            @if (TempData["InfoMessage"] != null)
+            {
+                <div class="alert alert-info alert-dismissible fade show" role="alert">
+                    <i class="fas fa-info-circle me-2"></i>@TempData["InfoMessage"]
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            }
+
+            <!-- Main Content -->
+            @RenderBody()
+        </main>
+    </div>
+
+    <!-- Scripts -->
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <script>
+        $(document).ready(function() {
+            // Sidebar toggle
+            $('#sidebarToggle').on('click', function() {
+                $('#sidebar').toggleClass('collapsed');
+                $('#mainWrapper').toggleClass('expanded');
+            });
+
+            // Mobile sidebar
+            if (window.innerWidth <= 768) {
+                $('#sidebar').addClass('collapsed');
+                $('#mainWrapper').addClass('expanded');
+
+                $('#sidebarToggle').on('click', function() {
+                    $('#sidebar').toggleClass('show');
+                });
+
+                // Close sidebar when clicking outside
+                $(document).on('click', function(e) {
+                    if (!$(e.target).closest('#sidebar, #sidebarToggle').length) {
+                        $('#sidebar').removeClass('show');
+                    }
+                });
+            }
+
+            // Auto hide alerts
+            setTimeout(function() {
+                $('.alert').fadeOut('slow');
+            }, 5000);
+
+            // Hide loading on page load
+            $(window).on('load', function() {
+                $('#loadingOverlay').hide();
+            });
+
+            // Fetch pending counts
+            fetchPendingCounts();
+        });
+
+        function fetchPendingCounts() {
+            // This would be AJAX calls to get pending counts
+            // For now, we'll simulate it
+            setTimeout(function() {
+                var ownerCount = 0; // Replace with actual API call
+                var carsCount = 0;  // Replace with actual API call
+                
+                if (ownerCount > 0) {
+                    $('#pendingOwnerCount').text(ownerCount).show();
+                }
+                if (carsCount > 0) {
+                    $('#pendingCarsCount').text(carsCount).show();
+                }
+            }, 1000);
+        }
+
+        // Show loading for form submissions
+        $('form').on('submit', function() {
+            if (!$(this).hasClass('no-loading')) {
+                $('#loadingOverlay').show();
+            }
+        });
+    </script>
+
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

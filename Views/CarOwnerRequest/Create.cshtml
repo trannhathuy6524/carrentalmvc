@@ -1,0 +1,138 @@
+@model CarOwnerRequestViewModel
+@{
+    ViewData["Title"] = "Đăng ký trở thành chủ xe";
+}
+
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card shadow-lg">
+                <div class="card-header bg-primary text-white">
+                    <h3 class="mb-0">
+                        <i class="fas fa-car-alt me-2"></i>
+                        Đăng ký trở thành chủ xe
+                    </h3>
+                </div>
+                <div class="card-body p-4">
+                    <!-- Introduction -->
+                    <div class="alert alert-info mb-4">
+                        <h5 class="alert-heading">
+                            <i class="fas fa-info-circle"></i> Lợi ích khi trở thành chủ xe
+                        </h5>
+                        <ul class="mb-0">
+                            <li>📈 Tăng thu nhập từ xe không sử dụng</li>
+                            <li>🛡️ Được bảo hiểm và hỗ trợ toàn diện</li>
+                            <li>👥 Tiếp cận hàng ngàn khách hàng tiềm năng</li>
+                            <li>💰 Nhận thanh toán nhanh chóng, minh bạch</li>
+                            <li>📱 Quản lý dễ dàng qua ứng dụng</li>
+                        </ul>
+                    </div>
+
+                    <!-- Form -->
+                    <form asp-action="Create" method="post">
+                        <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+
+                        <h5 class="text-primary mb-3">Thông tin cá nhân</h5>
+
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label asp-for="FullName" class="form-label">Họ và tên <span class="text-danger">*</span></label>
+                                <input asp-for="FullName" class="form-control" placeholder="Nguyễn Văn A" />
+                                <span asp-validation-for="FullName" class="text-danger"></span>
+                            </div>
+                            <div class="col-md-6">
+                                <label asp-for="Email" class="form-label">Email <span class="text-danger">*</span></label>
+                                <input asp-for="Email" class="form-control" placeholder="email@example.com" />
+                                <span asp-validation-for="Email" class="text-danger"></span>
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label asp-for="PhoneNumber" class="form-label">Số điện thoại <span class="text-danger">*</span></label>
+                                <input asp-for="PhoneNumber" class="form-control" placeholder="0123456789" />
+                                <span asp-validation-for="PhoneNumber" class="text-danger"></span>
+                            </div>
+                            <div class="col-md-6">
+                                <label asp-for="NationalId" class="form-label">CCCD/CMND <span class="text-danger">*</span></label>
+                                <input asp-for="NationalId" class="form-control" placeholder="123456789012" />
+                                <span asp-validation-for="NationalId" class="text-danger"></span>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="Address" class="form-label">Địa chỉ <span class="text-danger">*</span></label>
+                            <input asp-for="Address" class="form-control" placeholder="123 Đường ABC, Quận XYZ, Thành phố..." />
+                            <span asp-validation-for="Address" class="text-danger"></span>
+                        </div>
+
+                        <hr class="my-4">
+
+                        <h5 class="text-primary mb-3">Thông tin cho thuê xe</h5>
+
+                        <div class="mb-3">
+                            <label asp-for="ExpectedCarCount" class="form-label">Số xe dự kiến cho thuê <span class="text-danger">*</span></label>
+                            <input asp-for="ExpectedCarCount" type="number" min="1" max="100" class="form-control" />
+                            <span asp-validation-for="ExpectedCarCount" class="text-danger"></span>
+                            <small class="text-muted">Bạn có thể thêm xe sau khi được duyệt</small>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="Experience" class="form-label">Kinh nghiệm cho thuê xe (nếu có)</label>
+                            <textarea asp-for="Experience" class="form-control" rows="3" 
+                                      placeholder="Ví dụ: Đã cho thuê xe 2 năm trên nền tảng khác..."></textarea>
+                            <span asp-validation-for="Experience" class="text-danger"></span>
+                        </div>
+
+                        <div class="mb-4">
+                            <label asp-for="Notes" class="form-label">Ghi chú thêm</label>
+                            <textarea asp-for="Notes" class="form-control" rows="3" 
+                                      placeholder="Thông tin bổ sung bạn muốn chia sẻ..."></textarea>
+                            <span asp-validation-for="Notes" class="text-danger"></span>
+                        </div>
+
+                        <!-- Terms and Conditions -->
+                        <div class="alert alert-warning">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="agreeTerms" required>
+                                <label class="form-check-label" for="agreeTerms">
+                                    Tôi đồng ý với <a href="#" class="alert-link">điều khoản dịch vụ</a> và <a href="#" class="alert-link">chính sách bảo mật</a>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Actions -->
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                            <a asp-controller="Home" asp-action="Index" class="btn btn-secondary">
+                                <i class="fas fa-times me-1"></i> Hủy
+                            </a>
+                            <button type="submit" class="btn btn-primary px-4">
+                                <i class="fas fa-paper-plane me-1"></i> Gửi yêu cầu
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Help Section -->
+            <div class="card mt-4">
+                <div class="card-body">
+                    <h5 class="card-title">
+                        <i class="fas fa-question-circle text-info"></i> Cần hỗ trợ?
+                    </h5>
+                    <p class="card-text">
+                        Nếu bạn có bất kỳ câu hỏi nào về việc trở thành chủ xe, vui lòng liên hệ:
+                    </p>
+                    <ul class="list-unstyled">
+                        <li><i class="fas fa-phone text-success"></i> Hotline: <strong>1900 xxxx</strong></li>
+                        <li><i class="fas fa-envelope text-primary"></i> Email: <strong>support@example.com</strong></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}

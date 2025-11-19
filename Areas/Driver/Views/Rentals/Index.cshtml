@@ -1,0 +1,177 @@
+@model IEnumerable<Rental>
+@using carrentalmvc.Models
+@using carrentalmvc.Models.Enums
+@{
+    ViewData["Title"] = "Danh sách đơn thuê";
+    Layout = "~/Areas/Driver/Views/Shared/_DriverLayout.cshtml";
+
+    var currentStatus = ViewBag.CurrentStatus as RentalStatus?;
+    var currentFilter = ViewBag.CurrentFilter as string;
+}
+
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+        <h1 class="h2">
+            <i class="fas fa-list"></i> Đơn thuê của tôi
+        </h1>
+    </div>
+
+    <!-- Filters -->
+    <div class="card shadow mb-4">
+        <div class="card-header py-3">
+            <h6 class="m-0 font-weight-bold text-primary">
+                <i class="fas fa-filter"></i> Bộ lọc
+            </h6>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="btn-group mb-3" role="group">
+                        <a asp-action="Index" class="btn btn-sm @(string.IsNullOrEmpty(currentFilter) && !currentStatus.HasValue ? "btn-primary" : "btn-outline-primary")">
+                            <i class="fas fa-list"></i> Tất cả
+                        </a>
+                        <a asp-action="Index" asp-route-filter="pending" class="btn btn-sm @(currentFilter == "pending" ? "btn-warning" : "btn-outline-warning")">
+                            <i class="fas fa-clock"></i> Chờ xác nhận
+                        </a>
+                        <a asp-action="Index" asp-route-filter="accepted" class="btn btn-sm @(currentFilter == "accepted" ? "btn-success" : "btn-outline-success")">
+                            <i class="fas fa-check"></i> Đã chấp nhận
+                        </a>
+                        <a asp-action="Index" asp-route-status="@((int)RentalStatus.Active)" class="btn btn-sm @(currentStatus == RentalStatus.Active ? "btn-info" : "btn-outline-info")">
+                            <i class="fas fa-car"></i> Đang chạy
+                        </a>
+                        <a asp-action="Index" asp-route-status="@((int)RentalStatus.Completed)" class="btn btn-sm @(currentStatus == RentalStatus.Completed ? "btn-secondary" : "btn-outline-secondary")">
+                            <i class="fas fa-flag-checkered"></i> Đã hoàn thành
+                        </a>
+                        <a asp-action="Index" asp-route-filter="rejected" class="btn btn-sm @(currentFilter == "rejected" ? "btn-danger" : "btn-outline-danger")">
+                            <i class="fas fa-times"></i> Đã từ chối
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Rentals List -->
+    <div class="card shadow mb-4">
+        <div class="card-header py-3">
+            <h6 class="m-0 font-weight-bold text-primary">
+                Danh sách đơn thuê (@Model.Count())
+            </h6>
+        </div>
+        <div class="card-body">
+            @if (!Model.Any())
+            {
+                <div class="alert alert-info text-center">
+                    <i class="fas fa-info-circle fa-3x mb-3"></i>
+                    <h5>Không có đơn thuê nào</h5>
+                    <p class="mb-0">
+                        @if (!string.IsNullOrEmpty(currentFilter) || currentStatus.HasValue)
+                        {
+                            <span>Không có đơn thuê nào phù hợp với bộ lọc.</span>
+                        }
+                        else
+                        {
+                            <span>Bạn chưa được gán đơn thuê nào.</span>
+                        }
+                    </p>
+                </div>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Mã đơn</th>
+                                <th>Xe</th>
+                                <th>Khách hàng</th>
+                                <th>Thời gian thuê</th>
+                                <th>Giá trị</th>
+                                <th>Trạng thái</th>
+                                <th>Xác nhận</th>
+                                <th>Thao tác</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var rental in Model)
+                            {
+                                <tr>
+                                    <td>
+                                        <strong>#@rental.RentalId</strong><br />
+                                        <small class="text-muted">@rental.CreatedAt.ToString("dd/MM/yyyy")</small>
+                                    </td>
+                                    <td>
+                                        <strong>@rental.Car?.Name</strong><br />
+                                        <small class="text-muted">@rental.Car?.Brand?.Name</small>
+                                    </td>
+                                    <td>
+                                        @rental.Renter?.FullName<br />
+                                        <small class="text-muted">
+                                            <i class="fas fa-phone"></i> @rental.Renter?.PhoneNumber
+                                        </small>
+                                    </td>
+                                    <td>
+                                        <small>
+                                            <i class="fas fa-calendar-alt"></i> @rental.StartDate.ToString("dd/MM/yyyy HH:mm")<br />
+                                            <i class="fas fa-arrow-right"></i> @rental.EndDate.ToString("dd/MM/yyyy HH:mm")
+                                        </small>
+                                    </td>
+                                    <td>
+                                        <strong class="text-success">@rental.TotalPrice.ToString("N0") VNĐ</strong><br />
+                                        <small class="text-muted">Phí TX: @((rental.TotalPrice * 0.3m).ToString("N0")) VNĐ</small>
+                                    </td>
+                                    <td>
+                                        @switch (rental.Status)
+                                        {
+                                            case RentalStatus.Pending:
+                                                <span class="badge bg-secondary">Chờ xác nhận</span>
+                                                break;
+                                            case RentalStatus.Confirmed:
+                                                <span class="badge bg-warning">Đã xác nhận</span>
+                                                break;
+                                            case RentalStatus.Active:
+                                                <span class="badge bg-success">Đang chạy</span>
+                                                break;
+                                            case RentalStatus.Completed:
+                                                <span class="badge bg-primary">Hoàn thành</span>
+                                                break;
+                                            case RentalStatus.Cancelled:
+                                                <span class="badge bg-danger">Đã hủy</span>
+                                                break;
+                                        }
+                                    </td>
+                                    <td>
+                                        @if (!rental.DriverAccepted.HasValue)
+                                        {
+                                            <span class="badge bg-warning">
+                                                <i class="fas fa-clock"></i> Chờ xử lý
+                                            </span>
+                                        }
+                                        else if (rental.DriverAccepted == true)
+                                        {
+                                            <span class="badge bg-success">
+                                                <i class="fas fa-check"></i> Đã chấp nhận
+                                            </span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-danger">
+                                                <i class="fas fa-times"></i> Đã từ chối
+                                            </span>
+                                        }
+                                    </td>
+                                    <td>
+                                        <a asp-action="Details" asp-route-id="@rental.RentalId" class="btn btn-sm btn-primary">
+                                            <i class="fas fa-eye"></i> Chi tiết
+                                        </a>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
+    </div>
+</div>

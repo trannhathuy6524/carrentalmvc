@@ -1,0 +1,169 @@
+﻿@using carrentalmvc.Models.Enums
+@model carrentalmvc.Models.Model3DTemplate
+@{
+    ViewData["Title"] = "Xóa mô hình 3D";
+
+    var fileFormatText = ViewBag.FileFormatText as string ?? Model.FileFormat.ToString();
+    var fileSizeText = ViewBag.FileSizeText as string ?? FormatFileSize(Model.FileSize);
+    var brandName = ViewBag.BrandName as string ?? Model.Brand?.Name ?? "Chung";
+    var categoryName = ViewBag.CategoryName as string ?? Model.Category?.Name ?? "Chung";
+    var usageCount = ViewBag.UsageCount != null ? (int)ViewBag.UsageCount : (Model.CarModels3D?.Count ?? 0);
+}
+
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2 text-danger"><i class="fas fa-trash"></i> Xóa mô hình 3D</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <div class="btn-group">
+            <a asp-action="Details" asp-route-id="@Model.TemplateId" class="btn btn-sm btn-outline-info">
+                <i class="fas fa-eye"></i> Xem chi tiết
+            </a>
+            <a asp-action="Index" class="btn btn-sm btn-outline-secondary">
+                <i class="fas fa-arrow-left"></i> Quay lại
+            </a>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card border-danger">
+            <div class="card-header bg-danger text-white">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-exclamation-triangle"></i> Xác nhận xóa mô hình 3D
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-danger">
+                    <h6><i class="fas fa-exclamation-triangle"></i> Cảnh báo!</h6>
+                    <p class="mb-0">
+                        Bạn có chắc chắn muốn xóa mô hình 3D "<strong>@Model.Name</strong>" không?
+                        Hành động này không thể hoàn tác.
+                    </p>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6">
+                        <dl class="row">
+                            <dt class="col-sm-5">Tên mô hình:</dt>
+                            <dd class="col-sm-7">@Model.Name</dd>
+
+                            <dt class="col-sm-5">Định dạng:</dt>
+                            <dd class="col-sm-7">
+                                <span class="badge bg-info">@fileFormatText</span>
+                            </dd>
+
+                            <dt class="col-sm-5">Kích thước:</dt>
+                            <dd class="col-sm-7">@fileSizeText</dd>
+
+                            <dt class="col-sm-5">Thương hiệu:</dt>
+                            <dd class="col-sm-7">@brandName</dd>
+                        </dl>
+                    </div>
+
+                    <div class="col-md-6">
+                        <dl class="row">
+                            <dt class="col-sm-5">Loại xe:</dt>
+                            <dd class="col-sm-7">@categoryName</dd>
+
+                            <dt class="col-sm-5">Trạng thái:</dt>
+                            <dd class="col-sm-7">
+                                @if (Model.IsActive)
+                                {
+                                    <span class="badge bg-success">Hoạt động</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-secondary">Tạm dừng</span>
+                                }
+                            </dd>
+
+                            <dt class="col-sm-5">Số lượng sử dụng:</dt>
+                            <dd class="col-sm-7">
+                                <span class="badge bg-primary">@usageCount xe</span>
+                            </dd>
+
+                            <dt class="col-sm-5">Ngày tạo:</dt>
+                            <dd class="col-sm-7">@Model.CreatedAt.ToString("dd/MM/yyyy")</dd>
+                        </dl>
+                    </div>
+                </div>
+
+                @if (usageCount > 0)
+                {
+                    <div class="alert alert-warning mt-3">
+                        <h6><i class="fas fa-exclamation-triangle"></i> Ảnh hưởng khi xóa:</h6>
+                        <ul class="mb-0">
+                            <li>Mô hình 3D này đang được sử dụng bởi <strong>@usageCount xe</strong></li>
+                            <li>Các xe này sẽ mất mô hình 3D sau khi xóa</li>
+                            <li>Chủ xe sẽ cần thiết lập lại mô hình 3D cho xe của họ</li>
+                        </ul>
+                    </div>
+                }
+
+                <div class="mt-4 d-flex justify-content-end">
+                    <a asp-action="Index" class="btn btn-secondary me-2">
+                        <i class="fas fa-times"></i> Hủy
+                    </a>
+                    <form asp-action="Delete" asp-route-id="@Model.TemplateId" method="post" class="d-inline">
+                        @Html.AntiForgeryToken()
+                        <input asp-for="TemplateId" type="hidden" />
+                        <button type="submit" class="btn btn-danger" onclick="return confirm('Bạn có CHẮC CHẮN muốn xóa mô hình 3D này không?')">
+                            <i class="fas fa-trash"></i> Xác nhận xóa
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="card-title mb-0">Hình ảnh xem trước</h6>
+            </div>
+            <div class="card-body text-center">
+                @if (!string.IsNullOrEmpty(Model.PreviewImageUrl))
+                {
+                    <img src="@Model.PreviewImageUrl" alt="@Model.Name" class="img-fluid rounded" style="max-height: 200px;" />
+                }
+                else
+                {
+                    <div class="bg-light d-flex align-items-center justify-content-center rounded" style="height: 150px;">
+                        <div class="text-center">
+                            <i class="fas fa-cube fa-2x text-muted mb-2"></i>
+                            <p class="text-muted mb-0 small">Không có hình ảnh</p>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <div class="card mt-3">
+            <div class="card-header">
+                <h6 class="card-title mb-0">Thông tin kỹ thuật</h6>
+            </div>
+            <div class="card-body">
+                <small class="text-muted">
+                    <strong>URL mô hình:</strong><br />
+                    @Model.ModelUrl
+                </small>
+                <div class="mt-2 small text-muted">
+                    <div><strong>Định dạng:</strong> @fileFormatText</div>
+                    <div><strong>Kích thước:</strong> @fileSizeText</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@functions {
+    private string FormatFileSize(long? size)
+    {
+        if (!size.HasValue) return "N/A";
+        var s = size.Value;
+        if (s < 1024) return $"{s} B";
+        if (s < 1024 * 1024) return $"{s / 1024.0:F1} KB";
+        if (s < 1024L * 1024L * 1024L) return $"{s / (1024.0 * 1024.0):F1} MB";
+        return $"{s / (1024.0 * 1024.0 * 1024.0):F1} GB";
+    }
+}

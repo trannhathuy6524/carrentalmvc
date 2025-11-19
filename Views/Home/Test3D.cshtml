@@ -1,0 +1,54 @@
+@{
+    ViewData["Title"] = "Test 3D Model";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<h2>Test Google Model Viewer</h2>
+
+<div style="width: 100%; height: 500px; border: 2px solid red;">
+    <model-viewer 
+        src="https://modelviewer.dev/shared-assets/models/Astronaut.glb"
+        alt="Test 3D Model"
+        auto-rotate
+        camera-controls
+        style="width: 100%; height: 100%; background-color: #f0f0f0;">
+        
+        <div slot="poster">
+            <p>Loading...</p>
+        </div>
+        
+        <div slot="error">
+            <p style="color: red;">Failed to load model!</p>
+        </div>
+    </model-viewer>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('🧪 Test page loaded');
+    
+    const modelViewer = document.querySelector('model-viewer');
+    
+    if (modelViewer) {
+        console.log('✅ Model viewer element found');
+        
+        modelViewer.addEventListener('load', () => {
+            console.log('✅ Model loaded successfully!');
+        });
+        
+        modelViewer.addEventListener('error', (e) => {
+            console.error('❌ Model failed to load:', e);
+        });
+        
+        // Check after 3 seconds
+        setTimeout(() => {
+            console.log('🔍 Checking model viewer state:');
+            console.log('- loaded:', modelViewer.loaded);
+            console.log('- loading:', modelViewer.loading);
+            console.log('- src:', modelViewer.src);
+        }, 3000);
+    } else {
+        console.error('❌ Model viewer element NOT found');
+    }
+});
+</script>

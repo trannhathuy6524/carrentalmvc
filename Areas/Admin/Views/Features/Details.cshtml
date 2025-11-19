@@ -1,0 +1,118 @@
+﻿@model carrentalmvc.Models.Feature
+@{
+    ViewData["Title"] = $"Chi tiết tính năng - {Model.Name}";
+}
+
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2"><i class="fas fa-cogs"></i> Chi tiết tính năng</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <div class="btn-group me-2">
+            <a asp-action="Edit" asp-route-id="@Model.FeatureId" class="btn btn-sm btn-warning">
+                <i class="fas fa-edit"></i> Chỉnh sửa
+            </a>
+            <a asp-action="Delete" asp-route-id="@Model.FeatureId" class="btn btn-sm btn-danger">
+                <i class="fas fa-trash"></i> Xóa
+            </a>
+        </div>
+        <div class="btn-group">
+            <a asp-action="Index" class="btn btn-sm btn-outline-secondary">
+                <i class="fas fa-arrow-left"></i> Quay lại
+            </a>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h6 class="mb-0">Thông tin chi tiết</h6>
+            </div>
+            <div class="card-body">
+                <dl class="row">
+                    <dt class="col-sm-3">ID:</dt>
+                    <dd class="col-sm-9">#@Model.FeatureId</dd>
+
+                    <dt class="col-sm-3">Tên tính năng:</dt>
+                    <dd class="col-sm-9">
+                        <h5 class="text-primary">@Model.Name</h5>
+                    </dd>
+
+                    <dt class="col-sm-3">Icon:</dt>
+                    <dd class="col-sm-9">
+                        @if (!string.IsNullOrEmpty(Model.Icon))
+                        {
+                            <div class="d-flex align-items-center">
+                                <i class="@Model.Icon fa-2x text-primary me-3"></i>
+                                <code>@Model.Icon</code>
+                            </div>
+                        }
+                        else
+                        {
+                            <em class="text-muted">Chưa có icon</em>
+                        }
+                    </dd>
+
+                    <dt class="col-sm-3">Mô tả:</dt>
+                    <dd class="col-sm-9">
+                        @if (!string.IsNullOrEmpty(Model.Description))
+                        {
+                            <p>@Model.Description</p>
+                        }
+                        else
+                        {
+                            <em class="text-muted">Chưa có mô tả</em>
+                        }
+                    </dd>
+
+                    <dt class="col-sm-3">Ngày tạo:</dt>
+                    <dd class="col-sm-9">@Model.CreatedAt.ToString("dd/MM/yyyy HH:mm")</dd>
+
+                    <dt class="col-sm-3">Cập nhật lần cuối:</dt>
+                    <dd class="col-sm-9">@Model.UpdatedAt.ToString("dd/MM/yyyy HH:mm")</dd>
+                </dl>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h6 class="mb-0">Xem trước tính năng</h6>
+            </div>
+            <div class="card-body text-center">
+                <div class="p-3 border rounded">
+                    @if (!string.IsNullOrEmpty(Model.Icon))
+                    {
+                        <i class="@Model.Icon fa-3x text-primary mb-2"></i>
+                    }
+                    else
+                    {
+                        <i class="fas fa-cog fa-3x text-muted mb-2"></i>
+                    }
+                    <h6>@Model.Name</h6>
+                    <p class="text-muted small">@(Model.Description ?? "Mô tả tính năng")</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0">Thao tác nhanh</h6>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a asp-action="Edit" asp-route-id="@Model.FeatureId" class="btn btn-outline-warning">
+                        <i class="fas fa-edit"></i> Chỉnh sửa thông tin
+                    </a>
+
+                    <hr>
+
+                    <a asp-action="Delete" asp-route-id="@Model.FeatureId" class="btn btn-outline-danger">
+                        <i class="fas fa-trash"></i> Xóa tính năng
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

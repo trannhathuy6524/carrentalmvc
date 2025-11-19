@@ -1,0 +1,764 @@
+﻿@using carrentalmvc.Models
+@using carrentalmvc.Models.Enums
+@model List<Car>
+@{
+    ViewData["Title"] = "Trang chủ - Thuê xe ô tô";
+
+    // Get data from ViewBag
+    var searchTerm = ViewBag.SearchTerm as string;
+    var brandId = ViewBag.BrandId as int?;
+    var categoryId = ViewBag.CategoryId as int?;
+    var minPrice = ViewBag.MinPrice as decimal?;
+    var maxPrice = ViewBag.MaxPrice as decimal?;
+    var minYear = ViewBag.MinYear as int?;
+    var maxYear = ViewBag.MaxYear as int?;
+    var fuelType = ViewBag.FuelType as FuelType?;
+    var transmission = ViewBag.Transmission as Transmission?;
+
+    var brands = ViewBag.Brands as Microsoft.AspNetCore.Mvc.Rendering.SelectList;
+    var categories = ViewBag.Categories as Microsoft.AspNetCore.Mvc.Rendering.SelectList;
+
+    var pageNumber = (int)(ViewBag.PageNumber ?? 1);
+    var pageSize = (int)(ViewBag.PageSize ?? 12);
+    var totalCount = (int)(ViewBag.TotalCount ?? 0);
+    var totalPages = (int)(ViewBag.TotalPages ?? 0);
+    var hasPreviousPage = (bool)(ViewBag.HasPreviousPage ?? false);
+    var hasNextPage = (bool)(ViewBag.HasNextPage ?? false);
+
+    var carRatings = ViewBag.CarRatings as Dictionary<int, (double avgRating, int count)> ?? new Dictionary<int, (double avgRating, int count)>();
+
+    var getTransmissionText = ViewBag.GetTransmissionText as Func<Transmission?, string?>;
+    var getFuelTypeText = ViewBag.GetFuelTypeText as Func<FuelType?, string?>;
+    var getCarStatusText = ViewBag.GetCarStatusText as Func<CarStatus, string>;
+
+    var isGuest = (bool)(ViewBag.IsGuestUser ?? true);
+    var canRent = (bool)(ViewBag.CanRent ?? false);
+    var showLoginPrompt = (bool)(ViewBag.ShowLoginPrompt ?? true);
+}
+
+<!-- Hero Section với Background Image Toàn Màn Hình -->
+<section class="hero-section-large">
+    <div class="hero-overlay"></div>
+    <div class="hero-content">
+        <div class="container">
+            <div class="row justify-content-center text-center">
+                <div class="col-lg-10">
+                    <h1 class="hero-title display-3 fw-bold text-white mb-4">
+                        Thuê Xe Tự Lái - Cùng Bạn Trên Mọi Hành Trình
+                    </h1>
+                    <p class="hero-subtitle lead text-white mb-5">
+                        Trải nghiệm sự khác biệt từ hơn <strong>@totalCount</strong> xe gia đình đời mới khắp Việt Nam
+                    </p>
+
+                    @if (isGuest)
+                    {
+                        <div class="d-flex gap-3 mb-5 justify-content-center flex-wrap">
+                            <a asp-controller="Home" asp-action="Register" class="btn btn-hero btn-primary btn-lg px-5 py-3">
+                                <i class="fas fa-user-plus me-2"></i>Đăng ký ngay
+                            </a>
+                            <a asp-controller="Home" asp-action="Login" class="btn btn-hero btn-outline-light btn-lg px-5 py-3">
+                                <i class="fas fa-sign-in-alt me-2"></i>Đăng nhập
+                            </a>
+                        </div>
+                    }
+
+                    <!-- Search Card Floating -->
+                    <div class="hero-search-card card shadow-lg border-0">
+                        <div class="card-body p-4">
+                            <!-- Tabs -->
+                            <ul class="nav nav-pills nav-fill mb-4" id="rentalTypeTabs" role="tablist">
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link active" id="self-drive-tab" data-bs-toggle="pill" 
+                                            data-bs-target="#self-drive" type="button" role="tab">
+                                        <i class="fas fa-car me-2"></i>Xe tự lái
+                                    </button>
+                                </li>
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link" id="with-driver-tab" data-bs-toggle="pill" 
+                                            data-bs-target="#with-driver" type="button" role="tab">
+                                        <i class="fas fa-user-tie me-2"></i>Xe có tài xế
+                                    </button>
+                                </li>
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link" id="long-term-tab" data-bs-toggle="pill" 
+                                            data-bs-target="#long-term" type="button" role="tab">
+                                        <i class="fas fa-calendar-alt me-2"></i>Thuê dài hạn
+                                    </button>
+                                </li>
+                            </ul>
+
+                            <!-- Tab Content -->
+                            <div class="tab-content" id="rentalTypeContent">
+                                <div class="tab-pane fade show active" id="self-drive" role="tabpanel">
+                                    <form method="get" asp-action="Index" class="row g-3 align-items-end">
+                                        <div class="col-md-5">
+                                            <label class="form-label fw-semibold">
+                                                <i class="fas fa-search me-1"></i>Tìm kiếm
+                                            </label>
+                                            <input type="text" class="form-control form-control-lg" 
+                                                   name="searchTerm" value="@searchTerm" 
+                                                   placeholder="Tên xe, thương hiệu...">
+                                        </div>
+
+                                        <div class="col-md-3">
+                                            <label class="form-label fw-semibold">
+                                                <i class="fas fa-building me-1"></i>Thương hiệu
+                                            </label>
+                                            <select class="form-select form-select-lg" name="brandId" asp-items="brands">
+                                                <option value="">Tất cả</option>
+                                            </select>
+                                        </div>
+
+                                        <div class="col-md-2">
+                                            <label class="form-label fw-semibold">
+                                                <i class="fas fa-tags me-1"></i>Loại xe
+                                            </label>
+                                            <select class="form-select form-select-lg" name="categoryId" asp-items="categories">
+                                                <option value="">Tất cả</option>
+                                            </select>
+                                        </div>
+
+                                        <div class="col-md-2">
+                                            <button type="submit" class="btn btn-success btn-lg w-100 py-3">
+                                                <i class="fas fa-search me-2"></i>Tìm Xe
+                                            </button>
+                                        </div>
+                                    </form>
+                                </div>
+
+                                <div class="tab-pane fade" id="with-driver" role="tabpanel">
+                                    <div class="text-center py-4">
+                                        <i class="fas fa-user-tie fa-3x text-muted mb-3"></i>
+                                        <p class="text-muted">Dịch vụ xe có tài xế đang được phát triển</p>
+                                    </div>
+                                </div>
+
+                                <div class="tab-pane fade" id="long-term" role="tabpanel">
+                                    <div class="text-center py-4">
+                                        <i class="fas fa-calendar-alt fa-3x text-muted mb-3"></i>
+                                        <p class="text-muted">Dịch vụ thuê dài hạn đang được phát triển</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scroll Down Indicator -->
+    <div class="scroll-indicator">
+        <a href="#features-section" class="text-white">
+            <i class="fas fa-chevron-down fa-2x animate-bounce"></i>
+        </a>
+    </div>
+</section>
+
+<!-- Guest Benefits Section -->
+@if (isGuest)
+{
+    <section id="features-section" class="py-4 bg-light border-bottom">
+        <div class="container">
+            <div class="row text-center g-3">
+                <div class="col-md-4">
+                    <div class="d-flex align-items-center justify-content-center">
+                        <i class="fas fa-eye text-primary me-2 fs-4"></i>
+                        <span><strong>Xem thông tin xe</strong> - Miễn phí</span>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="d-flex align-items-center justify-content-center">
+                        <i class="fas fa-car text-success me-2 fs-4"></i>
+                        <span><strong>Thuê xe</strong> - Cần đăng ký</span>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="d-flex align-items-center justify-content-center">
+                        <i class="fas fa-star text-warning me-2 fs-4"></i>
+                        <span><strong>Đánh giá xe</strong> - Cần đăng ký</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+}
+
+<!-- Search & Filter Section -->
+<section id="cars-section" class="py-5">
+    <div class="container">
+        <div class="row mb-4">
+            <div class="col-12">
+                <h2 class="text-center mb-4">
+                    @if (isGuest)
+                    {
+                        <i class="fas fa-car me-2"></i>
+                        <span>Khám phá các mẫu xe</span>
+                    }
+                    else
+                    {
+                        <i class="fas fa-search me-2"></i>
+                        <span>Tìm xe phù hợp với bạn</span>
+                    }
+                </h2>
+
+                <!-- Advanced Filters (Collapsible) -->
+                <div class="card shadow-sm">
+                    <div class="card-header bg-white">
+                        <button class="btn btn-link text-decoration-none w-100 text-start" 
+                                type="button" data-bs-toggle="collapse" data-bs-target="#advancedFilters">
+                            <i class="fas fa-filter me-2"></i>Bộ lọc nâng cao
+                            <i class="fas fa-chevron-down float-end"></i>
+                        </button>
+                    </div>
+                    <div class="collapse" id="advancedFilters">
+                        <div class="card-body">
+                            <form method="get" asp-action="Index" class="row g-3">
+                                <div class="col-md-3">
+                                    <label for="searchTerm" class="form-label">
+                                        <i class="fas fa-search me-1"></i>Tìm kiếm
+                                    </label>
+                                    <input type="text" class="form-control" id="searchTerm" name="searchTerm"
+                                           value="@searchTerm" placeholder="Tên xe, thương hiệu...">
+                                </div>
+
+                                <div class="col-md-2">
+                                    <label for="brandId" class="form-label">
+                                        <i class="fas fa-building me-1"></i>Thương hiệu
+                                    </label>
+                                    <select class="form-select" id="brandId" name="brandId" asp-items="brands">
+                                        <option value="">Tất cả</option>
+                                    </select>
+                                </div>
+
+                                <div class="col-md-2">
+                                    <label for="categoryId" class="form-label">
+                                        <i class="fas fa-tags me-1"></i>Loại xe
+                                    </label>
+                                    <select class="form-select" id="categoryId" name="categoryId" asp-items="categories">
+                                        <option value="">Tất cả</option>
+                                    </select>
+                                </div>
+
+                                <div class="col-md-2">
+                                    <label for="minPrice" class="form-label">
+                                        <i class="fas fa-money-bill-wave me-1"></i>Giá từ
+                                    </label>
+                                    <input type="number" class="form-control" id="minPrice" name="minPrice"
+                                           value="@minPrice" placeholder="0" min="0" step="100000">
+                                </div>
+
+                                <div class="col-md-2">
+                                    <label for="maxPrice" class="form-label">
+                                        <i class="fas fa-money-bill-wave me-1"></i>Giá đến
+                                    </label>
+                                    <input type="number" class="form-control" id="maxPrice" name="maxPrice"
+                                           value="@maxPrice" placeholder="5000000" min="0" step="100000">
+                                </div>
+
+                                <div class="col-md-1 d-flex align-items-end">
+                                    <button type="submit" class="btn btn-primary w-100">
+                                        <i class="fas fa-search"></i>
+                                    </button>
+                                </div>
+
+                                @if (!string.IsNullOrEmpty(searchTerm) || brandId.HasValue || categoryId.HasValue ||
+                                   minPrice.HasValue || maxPrice.HasValue)
+                                {
+                                    <div class="col-12">
+                                        <a asp-action="Index" class="btn btn-outline-secondary btn-sm">
+                                            <i class="fas fa-times me-1"></i>Xóa bộ lọc
+                                        </a>
+                                    </div>
+                                }
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Cars Count -->
+        @if (totalCount > 0)
+        {
+            <div class="row mb-3">
+                <div class="col-12">
+                    <p class="text-muted">
+                        Tìm thấy <strong>@totalCount</strong> xe
+                        @if (!string.IsNullOrEmpty(searchTerm) || brandId.HasValue || categoryId.HasValue)
+                        {
+                            <span>phù hợp với bộ lọc của bạn</span>
+                        }
+                    </p>
+                </div>
+            </div>
+        }
+
+        <!-- Cars Grid -->
+        <div class="row">
+            @if (Model.Any())
+            {
+                @foreach (var car in Model)
+                {
+                    var primaryImage = car.CarImages?.FirstOrDefault(img => img.IsPrimary);
+                    var imageUrl = primaryImage?.ImageUrl ?? car.CarImages?.FirstOrDefault()?.ImageUrl;
+                    var rating = carRatings.ContainsKey(car.CarId) ? carRatings[car.CarId] : (avgRating: 0.0, count: 0);
+
+                    <div class="col-lg-4 col-md-6 mb-4">
+                        <div class="card h-100 shadow-sm car-card">
+                            <!-- Car Image -->
+                            <div class="position-relative">
+                                @if (!string.IsNullOrEmpty(imageUrl))
+                                {
+                                    <img src="@imageUrl" class="card-img-top" alt="@car.Name"
+                                         style="height: 200px; object-fit: cover;">
+                                }
+                                else
+                                {
+                                    <div class="card-img-top bg-light d-flex align-items-center justify-content-center"
+                                         style="height: 200px;">
+                                        <i class="fas fa-car fa-3x text-muted"></i>
+                                    </div>
+                                }
+
+                                <!-- Price Badge -->
+                                <div class="position-absolute top-0 end-0 m-2">
+                                    <span class="badge bg-success fs-6 shadow">
+                                        @car.PricePerDay.ToString("N0") VNĐ/ngày
+                                    </span>
+                                </div>
+
+                                <!-- Status Badge -->
+                                <div class="position-absolute top-0 start-0 m-2">
+                                    @if (car.Status == CarStatus.Rented)
+                                    {
+                                        <span class="badge bg-warning shadow" style="backdrop-filter: blur(10px);">
+                                            <i class="fas fa-clock me-1"></i>Đang thuê
+                                        </span>
+                                    }
+                                    else if (car.Status == CarStatus.Available)
+                                    {
+                                        <span class="badge bg-info shadow" style="backdrop-filter: blur(10px);">
+                                            <i class="fas fa-check-circle me-1"></i>Sẵn sàng
+                                        </span>
+                                    }
+                                </div>
+                            </div>
+
+                            <div class="card-body d-flex flex-column">
+                                <h5 class="card-title text-truncate" title="@car.Name">@car.Name</h5>
+                                <p class="text-muted mb-2 small">
+                                    <i class="fas fa-building me-1"></i>@(car.Brand?.Name ?? "N/A")
+                                    <span class="mx-1">•</span>
+                                    <i class="fas fa-tags me-1"></i>@(car.Category?.Name ?? "N/A")
+                                </p>
+
+                                <!-- Car Details -->
+                                <div class="row text-center mb-3 g-2">
+                                    @if (car.Year > 0)
+                                    {
+                                        <div class="col-4">
+                                            <small class="text-muted">
+                                                <i class="fas fa-calendar-alt d-block mb-1"></i>
+                                                <span>@car.Year</span>
+                                            </small>
+                                        </div>
+                                    }
+                                    @if (car.Seats.HasValue && car.Seats > 0)
+                                    {
+                                        <div class="col-4">
+                                            <small class="text-muted">
+                                                <i class="fas fa-users d-block mb-1"></i>
+                                                <span>@car.Seats chỗ</span>
+                                            </small>
+                                        </div>
+                                    }
+                                    @if (car.FuelType.HasValue)
+                                    {
+                                        <div class="col-4">
+                                            <small class="text-muted">
+                                                <i class="fas fa-gas-pump d-block mb-1"></i>
+                                                <span>@(getFuelTypeText != null ? getFuelTypeText(car.FuelType) : car.FuelType.ToString())</span>
+                                            </small>
+                                        </div>
+                                    }
+                                </div>
+
+                                <!-- Rating -->
+                                @if (rating.count > 0)
+                                {
+                                    <div class="mb-3">
+                                        <div class="d-flex align-items-center">
+                                            <div class="text-warning me-2">
+                                                @for (int i = 1; i <= 5; i++)
+                                                {
+                                                    <i class="fas fa-star@(i <= rating.avgRating ? "" : " text-muted") small"></i>
+                                                }
+                                            </div>
+                                            <small class="text-muted">(@rating.count đánh giá)</small>
+                                        </div>
+                                    </div>
+                                }
+
+                                <!-- Action Buttons -->
+                                <div class="mt-auto">
+                                    <div class="d-grid gap-2">
+                                        @if (isGuest)
+                                        {
+                                            <a asp-controller="Cars" asp-action="Details" asp-route-id="@car.CarId"
+                                               class="btn btn-outline-primary">
+                                                <i class="fas fa-info-circle me-2"></i>Xem chi tiết
+                                            </a>
+                                        }
+                                        else
+                                        {
+                                            <a asp-area="Customer" asp-controller="Cars" asp-action="Details" asp-route-id="@car.CarId"
+                                               class="btn btn-outline-primary">
+                                                <i class="fas fa-info-circle me-2"></i>Xem chi tiết
+                                            </a>
+                                        }
+
+                                        @if (isGuest)
+                                        {
+                                            @if (car.Status == CarStatus.Rented)
+                                            {
+                                                <a asp-controller="Home" asp-action="Login" class="btn btn-warning">
+                                                    <i class="fas fa-calendar-alt me-2"></i>Đặt trước
+                                                </a>
+                                            }
+                                            else
+                                            {
+                                                <a asp-controller="Home" asp-action="Login" class="btn btn-success">
+                                                    <i class="fas fa-user-plus me-2"></i>Thuê ngay
+                                                </a>
+                                            }
+                                        }
+                                        else
+                                        {
+                                            @if (car.Status == CarStatus.Rented)
+                                            {
+                                                <a asp-area="Customer" asp-controller="Rentals" asp-action="Create"
+                                                   asp-route-carId="@car.CarId" class="btn btn-warning">
+                                                    <i class="fas fa-calendar-alt me-2"></i>Đặt trước
+                                                </a>
+                                            }
+                                            else
+                                            {
+                                                <a asp-area="Customer" asp-controller="Rentals" asp-action="Create"
+                                                   asp-route-carId="@car.CarId" class="btn btn-success">
+                                                    <i class="fas fa-car me-2"></i>Thuê ngay
+                                                </a>
+                                            }
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                }
+            }
+            else
+            {
+                <div class="col-12">
+                    <div class="text-center py-5">
+                        <i class="fas fa-car fa-4x text-muted mb-3"></i>
+                        <h4 class="text-muted">Không tìm thấy xe nào</h4>
+                        <p class="text-muted">
+                            @if (!string.IsNullOrEmpty(searchTerm) || brandId.HasValue || categoryId.HasValue)
+                            {
+                                <span>Hãy thử thay đổi điều kiện tìm kiếm</span>
+                            }
+                            else
+                            {
+                                <span>Hiện chưa có xe nào có sẵn</span>
+                            }
+                        </p>
+                        <a asp-action="Index" class="btn btn-primary">
+                            <i class="fas fa-redo me-2"></i>Xem tất cả xe
+                        </a>
+                    </div>
+                </div>
+            }
+        </div>
+
+        <!-- Pagination -->
+        @if (totalPages > 1)
+        {
+            <nav aria-label="Phân trang" class="mt-4">
+                <ul class="pagination justify-content-center">
+                    <li class="page-item @(!hasPreviousPage ? "disabled" : "")">
+                        <a class="page-link" asp-action="Index"
+                           asp-route-searchTerm="@searchTerm"
+                           asp-route-brandId="@brandId"
+                           asp-route-categoryId="@categoryId"
+                           asp-route-minPrice="@minPrice"
+                           asp-route-maxPrice="@maxPrice"
+                           asp-route-page="@(pageNumber - 1)">
+                            <i class="fas fa-chevron-left"></i>
+                        </a>
+                    </li>
+
+                    @for (int i = Math.Max(1, pageNumber - 2); i <= Math.Min(totalPages, pageNumber + 2); i++)
+                    {
+                        <li class="page-item @(i == pageNumber ? "active" : "")">
+                            <a class="page-link" asp-action="Index"
+                               asp-route-searchTerm="@searchTerm"
+                               asp-route-brandId="@brandId"
+                               asp-route-categoryId="@categoryId"
+                               asp-route-minPrice="@minPrice"
+                               asp-route-maxPrice="@maxPrice"
+                               asp-route-page="@i">@i</a>
+                        </li>
+                    }
+
+                    <li class="page-item @(!hasNextPage ? "disabled" : "")">
+                        <a class="page-link" asp-action="Index"
+                           asp-route-searchTerm="@searchTerm"
+                           asp-route-brandId="@brandId"
+                           asp-route-categoryId="@categoryId"
+                           asp-route-minPrice="@minPrice"
+                           asp-route-maxPrice="@maxPrice"
+                           asp-route-page="@(pageNumber + 1)">
+                            <i class="fas fa-chevron-right"></i>
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+        }
+    </div>
+</section>
+
+<!-- Call-to-Action cho khách chưa đăng nhập -->
+@if (isGuest && Model.Any())
+{
+    <section class="py-5 bg-primary text-white">
+        <div class="container text-center">
+            <h2 class="mb-4">Bắt đầu hành trình thuê xe của bạn!</h2>
+            <p class="lead mb-4">Đăng ký ngay để thuê xe và trải nghiệm dịch vụ tuyệt vời</p>
+            <div class="d-flex justify-content-center gap-3 flex-wrap">
+                <a asp-controller="Home" asp-action="Register" class="btn btn-light btn-lg">
+                    <i class="fas fa-user-plus me-2"></i>Đăng ký miễn phí
+                </a>
+                <a asp-controller="Home" asp-action="Login" class="btn btn-outline-light btn-lg">
+                    <i class="fas fa-sign-in-alt me-2"></i>Đã có tài khoản
+                </a>
+            </div>
+        </div>
+    </section>
+}
+
+<!-- Features Section -->
+<section class="py-5 bg-light">
+    <div class="container">
+        <h3 class="text-center mb-5">Tại sao chọn chúng tôi?</h3>
+        <div class="row g-4">
+            <div class="col-md-4">
+                <div class="text-center p-4">
+                    <div class="feature-icon mb-3">
+                        <i class="fas fa-shield-alt fa-3x text-primary"></i>
+                    </div>
+                    <h5>An toàn & Bảo hiểm</h5>
+                    <p class="text-muted">Tất cả xe đều được bảo hiểm toàn diện và kiểm tra kỹ lưỡng</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="text-center p-4">
+                    <div class="feature-icon mb-3">
+                        <i class="fas fa-hand-holding-usd fa-3x text-success"></i>
+                    </div>
+                    <h5>Giá cả cạnh tranh</h5>
+                    <p class="text-muted">Mức giá hợp lý nhất thị trường với nhiều khuyến mãi hấp dẫn</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="text-center p-4">
+                    <div class="feature-icon mb-3">
+                        <i class="fas fa-headset fa-3x text-info"></i>
+                    </div>
+                    <h5>Hỗ trợ 24/7</h5>
+                    <p class="text-muted">Đội ngũ hỗ trợ luôn sẵn sàng giúp đỡ bạn mọi lúc mọi nơi</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<style>
+    /* Hero Section với Background Image Lớn */
+    .hero-section-large {
+        position: relative;
+        min-height: 80vh; /* Giảm từ 100vh xuống 80vh */
+        background-image: linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.5)), 
+                          url('https://images.unsplash.com/photo-1449965408869-eaa3f722e40d?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80');
+        background-size: cover;
+        background-position: center;
+        background-attachment: scroll; /* Đổi từ fixed sang scroll để cố định */
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .hero-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(135deg, rgba(102, 126, 234, 0.7) 0%, rgba(118, 75, 162, 0.7) 100%);
+    }
+
+    .hero-content {
+        position: relative;
+        z-index: 2;
+        padding: 3rem 0; /* Giảm padding từ 4rem xuống 3rem */
+        width: 100%;
+    }
+
+    .hero-title {
+        font-weight: 800;
+        text-shadow: 2px 2px 8px rgba(0, 0, 0, 0.3);
+        letter-spacing: -1px;
+    }
+
+    .hero-subtitle {
+        text-shadow: 1px 1px 4px rgba(0, 0, 0, 0.3);
+        font-size: 1.25rem;
+    }
+
+    .hero-search-card {
+        max-width: 100%;
+        border-radius: 20px;
+        overflow: hidden;
+        backdrop-filter: blur(10px);
+        background: rgba(255, 255, 255, 0.98);
+    }
+
+    .btn-hero {
+        border-radius: 50px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    }
+
+    .btn-hero:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+    }
+
+    .scroll-indicator {
+        position: absolute;
+        bottom: 20px; /* Giảm từ 30px xuống 20px */
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 3;
+    }
+
+    .animate-bounce {
+        animation: bounce 2s infinite;
+    }
+
+    @@keyframes bounce {
+        0%, 20%, 50%, 80%, 100% {
+            transform: translateY(0);
+        }
+        40% {
+            transform: translateY(-10px);
+        }
+        60% {
+            transform: translateY(-5px);
+        }
+    }
+
+    .nav-pills .nav-link {
+        border-radius: 50px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+
+    .nav-pills .nav-link.active {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+
+    .car-card {
+        transition: all 0.3s ease;
+        border: 1px solid #e0e0e0;
+    }
+
+    .car-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 20px rgba(0,0,0,0.15) !important;
+    }
+
+    .smooth-scroll {
+        scroll-behavior: smooth;
+    }
+
+    .feature-icon {
+        height: 80px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .card-title {
+        min-height: 1.5em;
+    }
+
+    .pagination .page-link {
+        color: #667eea;
+    }
+
+    .pagination .page-item.active .page-link {
+        background-color: #667eea;
+        border-color: #667eea;
+    }
+
+    /* Responsive */
+    @@media (max-width: 768px) {
+        .hero-section-large {
+            min-height: 70vh; /* Giảm từ 90vh xuống 70vh cho mobile */
+            background-attachment: scroll;
+        }
+
+        .hero-title {
+            font-size: 2rem; /* Giảm kích thước title trên mobile */
+        }
+
+        .hero-subtitle {
+            font-size: 1rem;
+        }
+
+        .hero-search-card .form-control-lg,
+        .hero-search-card .form-select-lg {
+            font-size: 1rem;
+        }
+
+        .scroll-indicator {
+            bottom: 15px;
+        }
+    }
+</style>
+
+@section Scripts {
+    <script>
+        // Smooth scroll for anchor links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+            });
+        });
+
+        // REMOVED: Parallax effect - giữ hình cố định
+        // window.addEventListener('scroll', function() {
+        //     const scrolled = window.pageYOffset;
+        //     const heroSection = document.querySelector('.hero-section-large');
+        //     if (heroSection) {
+        //         heroSection.style.backgroundPositionY = scrolled * 0.5 + 'px';
+        //     }
+        // });
+    </script>
+}

@@ -1,0 +1,528 @@
+@using carrentalmvc.Models
+@using carrentalmvc.Models.Enums
+@model Rental
+@{
+    ViewData["Title"] = "Thanh toán đơn thuê #" + Model.RentalId;
+
+    // Get data from ViewBag
+    var totalPrice = (decimal)(ViewBag.TotalPrice ?? 0m);
+    var totalPaid = (decimal)(ViewBag.TotalPaid ?? 0m);
+    var remainingAmount = (decimal)(ViewBag.RemainingAmount ?? 0m);
+    var depositRequired = (decimal)(ViewBag.DepositRequired ?? 0m);
+    var depositPaid = (decimal)(ViewBag.DepositPaid ?? 0m);
+    var depositRemaining = (decimal)(ViewBag.DepositRemaining ?? 0m);
+    var hasDeposit = (bool)(ViewBag.HasDeposit ?? false);
+    var suggestedPaymentType = (PaymentType)(ViewBag.SuggestedPaymentType ?? PaymentType.Deposit);
+    var suggestedAmount = (decimal)(ViewBag.SuggestedAmount ?? 0m);
+
+    var getPaymentMethodText = ViewBag.GetPaymentMethodText as Func<PaymentMethod, string>;
+    var getPaymentTypeText = ViewBag.GetPaymentTypeText as Func<PaymentType, string>;
+    var getRentalStatusText = ViewBag.GetRentalStatusText as Func<RentalStatus, string>;
+
+    var carImageUrl = Model.Car?.CarImages?.FirstOrDefault(img => img.IsPrimary)?.ImageUrl ?? Model.Car?.CarImages?.FirstOrDefault()?.ImageUrl;
+}
+
+<div class="container-fluid py-4">
+    <div class="row">
+        <div class="col-12">
+            <!-- Breadcrumb -->
+            <nav aria-label="breadcrumb" class="mb-4">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a asp-action="Index" asp-controller="Rentals">Đơn thuê của tôi</a></li>
+                    <li class="breadcrumb-item"><a asp-action="Details" asp-controller="Rentals" asp-route-id="@Model.RentalId">Đơn thuê #@Model.RentalId</a></li>
+                    <li class="breadcrumb-item active">Thanh toán</li>
+                </ol>
+            </nav>
+
+            <h2 class="mb-4">
+                <i class="fas fa-credit-card me-2"></i>Thanh toán đơn thuê #@Model.RentalId
+            </h2>
+
+            <div class="row">
+                <!-- Left Column: Payment Form -->
+                <div class="col-lg-8">
+                    <div class="card shadow-sm mb-4">
+                        <div class="card-header bg-primary text-white">
+                            <h5 class="mb-0">
+                                <i class="fas fa-money-bill-wave me-2"></i>Thông tin thanh toán
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <form asp-action="Create" method="post">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="rentalId" value="@Model.RentalId" />
+
+                                <!-- Payment Type Selection -->
+                                <div class="mb-4">
+                                    <label class="form-label fw-bold">Loại thanh toán <span class="text-danger">*</span></label>
+                                    
+                                    <!-- Option 1: Deposit Payment -->
+                                    @if (depositRemaining > 0)
+                                    {
+                                        <div class="card mb-3 payment-option @(suggestedPaymentType == PaymentType.Deposit ? "border-primary" : "")">
+                                            <div class="card-body">
+                                                <div class="form-check">
+                                                    <input class="form-check-input payment-type-radio" 
+                                                           type="radio" 
+                                                           name="paymentType" 
+                                                           id="paymentTypeDeposit" 
+                                                           value="@((int)PaymentType.Deposit)"
+                                                           data-amount="@depositRemaining"
+                                                           checked="@(suggestedPaymentType == PaymentType.Deposit)" />
+                                                    <label class="form-check-label w-100" for="paymentTypeDeposit">
+                                                        <div class="d-flex justify-content-between align-items-start">
+                                                            <div>
+                                                                <h6 class="mb-1">
+                                                                    <i class="fas fa-piggy-bank text-info me-2"></i>
+                                                                    Thanh toán đặt cọc (30%)
+                                                                    @if (suggestedPaymentType == PaymentType.Deposit)
+                                                                    {
+                                                                        <span class="badge bg-warning text-dark ms-2">Khuyến nghị</span>
+                                                                    }
+                                                                </h6>
+                                                                <small class="text-muted">
+                                                                    Yêu cầu: <strong>@depositRequired.ToString("N0") VNĐ</strong><br />
+                                                                    Đã thanh toán: @depositPaid.ToString("N0") VNĐ<br />
+                                                                    Còn thiếu: <strong class="text-danger">@depositRemaining.ToString("N0") VNĐ</strong>
+                                                                </small>
+                                                            </div>
+                                                            <div class="text-end">
+                                                                <h4 class="text-info mb-0">@depositRemaining.ToString("N0")</h4>
+                                                                <small class="text-muted">VNĐ</small>
+                                                            </div>
+                                                        </div>
+                                                    </label>
+                                                </div>
+                                                @if (!hasDeposit)
+                                                {
+                                                    <div class="alert alert-warning mt-2 mb-0 py-2">
+                                                        <small>
+                                                            <i class="fas fa-exclamation-triangle me-1"></i>
+                                                            <strong>Lưu ý:</strong> Chủ xe chỉ xác nhận đơn khi bạn đã thanh toán đủ 30% đặt cọc.
+                                                        </small>
+                                                    </div>
+                                                }
+                                            </div>
+                                        </div>
+                                    }
+
+                                    <!-- Option 2: Full Payment -->
+                                    <div class="card mb-3 payment-option @(suggestedPaymentType == PaymentType.RentalFee && hasDeposit ? "border-primary" : "")">
+                                        <div class="card-body">
+                                            <div class="form-check">
+                                                <input class="form-check-input payment-type-radio" 
+                                                       type="radio" 
+                                                       name="paymentType" 
+                                                       id="paymentTypeRentalFee" 
+                                                       value="@((int)PaymentType.RentalFee)"
+                                                       data-amount="@remainingAmount"
+                                                       checked="@(suggestedPaymentType == PaymentType.RentalFee)" />
+                                                <label class="form-check-label w-100" for="paymentTypeRentalFee">
+                                                    <div class="d-flex justify-content-between align-items-start">
+                                                        <div>
+                                                            <h6 class="mb-1">
+                                                                <i class="fas fa-money-check-alt text-success me-2"></i>
+                                                                Thanh toán toàn bộ
+                                                                @if (hasDeposit)
+                                                                {
+                                                                    <span class="badge bg-success ms-2">Đã đủ đặt cọc</span>
+                                                                }
+                                                            </h6>
+                                                            <small class="text-muted">
+                                                                Tổng giá trị: @totalPrice.ToString("N0") VNĐ<br />
+                                                                Đã thanh toán: @totalPaid.ToString("N0") VNĐ<br />
+                                                                Còn lại: <strong class="text-danger">@remainingAmount.ToString("N0") VNĐ</strong>
+                                                            </small>
+                                                        </div>
+                                                        <div class="text-end">
+                                                            <h4 class="text-success mb-0">@remainingAmount.ToString("N0")</h4>
+                                                            <small class="text-muted">VNĐ</small>
+                                                        </div>
+                                                    </div>
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Option 3: Custom Amount -->
+                                    <div class="card mb-3 payment-option">
+                                        <div class="card-body">
+                                            <div class="form-check">
+                                                <input class="form-check-input payment-type-radio" 
+                                                       type="radio" 
+                                                       name="paymentType" 
+                                                       id="paymentTypeCustom" 
+                                                       value="@((int)PaymentType.RentalFee)"
+                                                       data-amount="0" />
+                                                <label class="form-check-label w-100" for="paymentTypeCustom">
+                                                    <h6 class="mb-1">
+                                                        <i class="fas fa-edit text-secondary me-2"></i>
+                                                        Số tiền tùy chỉnh
+                                                    </h6>
+                                                    <small class="text-muted">Nhập số tiền bạn muốn thanh toán (tối đa @remainingAmount.ToString("N0") VNĐ)</small>
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Amount Input -->
+                                <div class="mb-3">
+                                    <label for="amount" class="form-label fw-bold">Số tiền thanh toán <span class="text-danger">*</span></label>
+                                    <div class="input-group input-group-lg">
+                                        <input type="number" 
+                                               class="form-control" 
+                                               id="amount" 
+                                               name="amount" 
+                                               min="1" 
+                                               max="@remainingAmount" 
+                                               step="1000"
+                                               value="@suggestedAmount"
+                                               required />
+                                        <span class="input-group-text">VNĐ</span>
+                                    </div>
+                                    <small class="text-muted">Tối thiểu: 1,000 VNĐ | Tối đa: @remainingAmount.ToString("N0") VNĐ</small>
+                                </div>
+
+                                <!-- Payment Method -->
+                                <div class="mb-3">
+                                    <label for="paymentMethod" class="form-label fw-bold">Phương thức thanh toán <span class="text-danger">*</span></label>
+                                    <select class="form-select" id="paymentMethod" name="paymentMethod" required>
+                                        <option value="">-- Chọn phương thức --</option>
+                                        <option value="@((int)PaymentMethod.Cash)">💵 @(getPaymentMethodText?.Invoke(PaymentMethod.Cash) ?? "Tiền mặt")</option>
+                                        <option value="@((int)PaymentMethod.BankTransfer)" selected>🏦 @(getPaymentMethodText?.Invoke(PaymentMethod.BankTransfer) ?? "Chuyển khoản")</option>
+                                        <option value="@((int)PaymentMethod.EWallet)">📱 @(getPaymentMethodText?.Invoke(PaymentMethod.EWallet) ?? "Ví điện tử")</option>
+                                        <option value="@((int)PaymentMethod.CreditCard)">💳 @(getPaymentMethodText?.Invoke(PaymentMethod.CreditCard) ?? "Thẻ tín dụng")</option>
+                                    </select>
+                                </div>
+
+                                <!-- Bank Transfer Information -->
+                                <div id="bankTransferInfo" class="alert alert-info" style="display: none;">
+                                    <h6 class="alert-heading">
+                                        <i class="fas fa-university me-2"></i>Thông tin chuyển khoản
+                                    </h6>
+                                    <hr />
+                                    <p class="mb-2"><strong>Ngân hàng:</strong> Vietcombank</p>
+                                    <p class="mb-2"><strong>Số tài khoản:</strong> 1234567890</p>
+                                    <p class="mb-2"><strong>Chủ tài khoản:</strong> @(Model.Car?.Owner?.FullName ?? "N/A")</p>
+                                    <p class="mb-2">
+                                        <strong>Nội dung chuyển khoản:</strong> 
+                                        <code class="bg-white text-dark p-2 d-inline-block">THANHTOAN @Model.RentalId @(Model.Renter?.FullName ?? "")</code>
+                                    </p>
+                                    <small class="text-muted">
+                                        <i class="fas fa-info-circle me-1"></i>
+                                        Vui lòng chuyển khoản chính xác nội dung để được xác nhận tự động.
+                                    </small>
+                                </div>
+
+                                <!-- Notes -->
+                                <div class="mb-4">
+                                    <label for="notes" class="form-label">Ghi chú (tùy chọn)</label>
+                                    <textarea class="form-control" id="notes" name="notes" rows="3" 
+                                              placeholder="Nhập ghi chú về thanh toán (nếu có)..."></textarea>
+                                </div>
+
+                                <!-- Action Buttons -->
+                                <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                                    <a asp-action="Details" asp-controller="Rentals" asp-route-id="@Model.RentalId" 
+                                       class="btn btn-secondary">
+                                        <i class="fas fa-arrow-left me-2"></i>Quay lại
+                                    </a>
+                                    <button type="submit" class="btn btn-primary btn-lg">
+                                        <i class="fas fa-check-circle me-2"></i>Xác nhận thanh toán
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Column: Rental Summary -->
+                <div class="col-lg-4">
+                    <!-- Rental Info Card -->
+                    <div class="card shadow-sm mb-4">
+                        <div class="card-header bg-light">
+                            <h6 class="mb-0">
+                                <i class="fas fa-file-contract me-2"></i>Thông tin đơn thuê
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <!-- Car Image -->
+                            @if (!string.IsNullOrEmpty(carImageUrl))
+                            {
+                                <img src="@carImageUrl" alt="@Model.Car?.Name" class="img-fluid rounded mb-3" />
+                            }
+
+                            <h6 class="text-primary">@(Model.Car?.Name ?? "N/A")</h6>
+                            <p class="text-muted small mb-3">@(Model.Car?.Brand?.Name ?? "N/A")</p>
+
+                            <dl class="row mb-0">
+                                <dt class="col-6 small">Mã đơn:</dt>
+                                <dd class="col-6 small">#@Model.RentalId</dd>
+
+                                <dt class="col-6 small">Trạng thái:</dt>
+                                <dd class="col-6 small">
+                                    <span class="badge bg-@GetStatusBadgeClass(Model.Status)">
+                                        @(getRentalStatusText?.Invoke(Model.Status) ?? Model.Status.ToString())
+                                    </span>
+                                </dd>
+
+                                <dt class="col-6 small">Thời gian thuê:</dt>
+                                <dd class="col-6 small">@((Model.EndDate - Model.StartDate).Days) ngày</dd>
+                            </dl>
+                        </div>
+                    </div>
+
+                    <!-- Payment Summary Card -->
+                    <div class="card shadow-sm mb-4">
+                        <div class="card-header bg-success text-white">
+                            <h6 class="mb-0">
+                                <i class="fas fa-calculator me-2"></i>Tổng quan thanh toán
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <!-- Total Price -->
+                            <div class="d-flex justify-content-between mb-2">
+                                <span>Tổng giá trị:</span>
+                                <strong>@totalPrice.ToString("N0") VNĐ</strong>
+                            </div>
+
+                            <!-- Total Paid -->
+                            <div class="d-flex justify-content-between mb-2">
+                                <span class="text-success">Đã thanh toán:</span>
+                                <strong class="text-success">-@totalPaid.ToString("N0") VNĐ</strong>
+                            </div>
+
+                            <hr />
+
+                            <!-- Remaining -->
+                            <div class="d-flex justify-content-between mb-3">
+                                <strong>Còn lại:</strong>
+                                <h5 class="text-danger mb-0">@remainingAmount.ToString("N0") VNĐ</h5>
+                            </div>
+
+                            <!-- Progress Bar -->
+                            @{
+                                var paymentProgress = totalPrice > 0 ? (totalPaid / totalPrice * 100) : 0;
+                            }
+                            <div class="progress mb-2" style="height: 25px;">
+                                <div class="progress-bar @(paymentProgress >= 100 ? "bg-success" : "bg-info")" 
+                                     role="progressbar" 
+                                     style="width: @paymentProgress.ToString("F0")%">
+                                    @paymentProgress.ToString("F0")%
+                                </div>
+                            </div>
+
+                            <!-- Deposit Info -->
+                            <div class="mt-3 p-3 border rounded @(hasDeposit ? "border-success bg-success" : "border-warning bg-warning") bg-opacity-10">
+                                <h6 class="small mb-2">
+                                    <i class="fas fa-piggy-bank me-1"></i>
+                                    Đặt cọc (30%)
+                                </h6>
+                                <div class="d-flex justify-content-between small">
+                                    <span>Yêu cầu:</span>
+                                    <strong>@depositRequired.ToString("N0") VNĐ</strong>
+                                </div>
+                                <div class="d-flex justify-content-between small">
+                                    <span>Đã đặt:</span>
+                                    <strong class="@(hasDeposit ? "text-success" : "text-warning")">
+                                        @depositPaid.ToString("N0") VNĐ
+                                    </strong>
+                                </div>
+                                @if (!hasDeposit)
+                                {
+                                    <div class="d-flex justify-content-between small text-danger">
+                                        <span>Còn thiếu:</span>
+                                        <strong>@depositRemaining.ToString("N0") VNĐ</strong>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Summary -->
+                    <div class="card bg-light mb-3">
+                        <div class="card-body">
+                            <h6 class="card-title">Tổng kết thanh toán</h6>
+                            
+                            <dl class="row mb-0">
+                                <dt class="col-sm-6">Tổng giá trị đơn:</dt>
+                                <dd class="col-sm-6 text-end">@Model.TotalPrice.ToString("N0") VNĐ</dd>
+
+                                @* ✅ THÊM: Platform commission breakdown *@
+                                @{
+                                    var driverFee = Model.ActualDriverFee ?? 0m;
+                                    var breakdown = carrentalmvc.Data.Constants.PlatformConstants.GetRevenueBreakdown(Model.TotalPrice, driverFee);
+                                }
+
+                                <dt class="col-sm-6 text-muted small">
+                                    <i class="fas fa-info-circle"></i> Phân chia doanh thu:
+                                </dt>
+                                <dd class="col-sm-6"></dd>
+
+                                <dt class="col-sm-6 text-muted ps-4 small">• Nền tảng (10%):</dt>
+                                <dd class="col-sm-6 text-end text-muted small">@breakdown.PlatformFee.ToString("N0") VNĐ</dd>
+
+                                <dt class="col-sm-6 text-muted ps-4 small">• Chủ xe:</dt>
+                                <dd class="col-sm-6 text-end text-muted small">@breakdown.OwnerRevenue.ToString("N0") VNĐ</dd>
+
+                                @if (breakdown.DriverFee > 0)
+                                {
+                                    <dt class="col-sm-6 text-muted ps-4 small">• Tài xế:</dt>
+                                    <dd class="col-sm-6 text-end text-muted small">@breakdown.DriverFee.ToString("N0") VNĐ</dd>
+                                }
+
+                                <dt class="col-sm-6">Số tiền thanh toán:</dt>
+                                <dd class="col-sm-6 text-end">
+                                    <strong class="text-success" id="paymentAmount">
+                                        @suggestedAmount.ToString("N0") VNĐ
+                                    </strong>
+                                </dd>
+                            </dl>
+
+                            <div class="alert alert-info mb-0 mt-2">
+                                <small>
+                                    <i class="fas fa-shield-alt"></i>
+                                    <strong>Lưu ý:</strong> Phí nền tảng 10% giúp duy trì và phát triển dịch vụ.
+                                    Bạn sẽ nhận được hỗ trợ 24/7 và bảo hiểm toàn diện.
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Help Card -->
+                    <div class="card shadow-sm">
+                        <div class="card-header bg-light">
+                            <h6 class="mb-0">
+                                <i class="fas fa-question-circle me-2"></i>Cần hỗ trợ?
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <p class="small text-muted mb-2">Liên hệ với chúng tôi nếu bạn cần hỗ trợ</p>
+                            <a href="tel:1900xxxx" class="btn btn-outline-primary btn-sm w-100 mb-2">
+                                <i class="fas fa-phone me-2"></i>Hotline: 1900 xxxx
+                            </a>
+                            <a href="mailto:support@example.com" class="btn btn-outline-info btn-sm w-100">
+                                <i class="fas fa-envelope me-2"></i>Email hỗ trợ
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function () {
+            // Handle payment type radio change
+            $('.payment-type-radio').change(function () {
+                var selectedAmount = $(this).data('amount');
+                var isCustom = $(this).attr('id') === 'paymentTypeCustom';
+
+                if (!isCustom && selectedAmount > 0) {
+                    $('#amount').val(selectedAmount);
+                    $('#amount').attr('readonly', true);
+                } else {
+                    $('#amount').attr('readonly', false);
+                    if (isCustom) {
+                        $('#amount').val('').focus();
+                    }
+                }
+
+                // Highlight selected option
+                $('.payment-option').removeClass('border-primary');
+                $(this).closest('.payment-option').addClass('border-primary');
+            });
+
+            // Handle payment method change
+            $('#paymentMethod').change(function () {
+                if ($(this).val() == '@((int)PaymentMethod.BankTransfer)') {
+                    $('#bankTransferInfo').slideDown();
+                } else {
+                    $('#bankTransferInfo').slideUp();
+                }
+            });
+
+            // Trigger initial selection
+            $('.payment-type-radio:checked').trigger('change');
+            $('#paymentMethod').trigger('change');
+
+            // Form validation
+            $('form').submit(function (e) {
+                var amount = parseFloat($('#amount').val());
+                var remainingAmount = @remainingAmount;
+
+                if (amount <= 0) {
+                    e.preventDefault();
+                    alert('Số tiền phải lớn hơn 0');
+                    return false;
+                }
+
+                if (amount > remainingAmount) {
+                    e.preventDefault();
+                    alert('Số tiền không được vượt quá số tiền còn lại: ' + remainingAmount.toLocaleString('vi-VN') + ' VNĐ');
+                    return false;
+                }
+
+                // Show loading
+                var $btn = $(this).find('button[type="submit"]');
+                $btn.prop('disabled', true);
+                $btn.html('<span class="spinner-border spinner-border-sm me-2"></span>Đang xử lý...');
+            });
+
+            // Format number input
+            $('#amount').on('input', function () {
+                var val = $(this).val().replace(/[^0-9]/g, '');
+                if (val) {
+                    $(this).val(val);
+                }
+            });
+        });
+    </script>
+}
+
+@section Styles {
+    <style>
+        .payment-option {
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .payment-option:hover {
+            box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+        }
+
+        .payment-option.border-primary {
+            border-width: 2px !important;
+            box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+        }
+
+        .form-check-input:checked {
+            background-color: #0d6efd;
+            border-color: #0d6efd;
+        }
+
+        #bankTransferInfo code {
+            font-size: 0.9rem;
+            padding: 0.5rem;
+        }
+    </style>
+}
+
+@functions {
+    private string GetStatusBadgeClass(RentalStatus status)
+    {
+        return status switch
+        {
+            RentalStatus.Pending => "warning",
+            RentalStatus.Confirmed => "info",
+            RentalStatus.Active => "success",
+            RentalStatus.Completed => "primary",
+            RentalStatus.Cancelled => "danger",
+            RentalStatus.Overdue => "danger",
+            _ => "secondary"
+        };
+    }
+}

@@ -1,0 +1,320 @@
+@using carrentalmvc.Models
+@using carrentalmvc.Models.Enums
+@model PaymentDistribution
+@{
+    ViewData["Title"] = $"Chi tiết Phân phối #{Model.PaymentDistributionId}";
+    Layout = "~/Areas/Admin/Views/Shared/_AdminLayout.cshtml";
+
+    var payment = ViewBag.Payment as Payment;
+    var allDistributions = ViewBag.AllDistributions as IEnumerable<PaymentDistribution> ?? new List<PaymentDistribution>();
+    var getStatusText = ViewBag.GetStatusText as Func<PaymentDistributionStatus, string>;
+    var getRecipientTypeText = ViewBag.GetRecipientTypeText as Func<RecipientType, string>;
+
+    var statusClass = Model.Status switch
+    {
+        PaymentDistributionStatus.Pending => "warning",
+        PaymentDistributionStatus.Processing => "info",
+        PaymentDistributionStatus.Completed => "success",
+        PaymentDistributionStatus.Failed => "danger",
+        _ => "secondary"
+    };
+}
+
+<div class="container-fluid">
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a asp-action="Index">Phân phối</a></li>
+            <li class="breadcrumb-item active">Chi tiết #@Model.PaymentDistributionId</li>
+        </ol>
+    </nav>
+
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show">
+            <i class="fas fa-check-circle me-2"></i>@TempData["SuccessMessage"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show">
+            <i class="fas fa-exclamation-circle me-2"></i>@TempData["ErrorMessage"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    <div class="row">
+        <!-- Left Column: Distribution Details -->
+        <div class="col-lg-8">
+            <div class="card mb-4">
+                <div class="card-header bg-@statusClass text-white">
+                    <h4 class="mb-0">
+                        <i class="fas fa-share-alt me-2"></i>
+                        Phân phối #@Model.PaymentDistributionId
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <dl class="row">
+                        <dt class="col-sm-4">ID Phân phối:</dt>
+                        <dd class="col-sm-8"><strong>#@Model.PaymentDistributionId</strong></dd>
+
+                        <dt class="col-sm-4">Payment ID:</dt>
+                        <dd class="col-sm-8">
+                            <a asp-controller="Payments" asp-action="Details" asp-route-id="@Model.PaymentId">
+                                Payment #@Model.PaymentId
+                            </a>
+                        </dd>
+
+                        <dt class="col-sm-4">Người nhận:</dt>
+                        <dd class="col-sm-8">
+                            @if (Model.RecipientType == RecipientType.Platform)
+                            {
+                                <span class="badge bg-success fs-6">PLATFORM SYSTEM</span>
+                            }
+                            else
+                            {
+                                <div>
+                                    @(Model.Recipient?.FullName ?? "N/A")
+                                    <br />
+                                    <small class="text-muted">@Model.RecipientId</small>
+                                </div>
+                            }
+                        </dd>
+
+                        <dt class="col-sm-4">Loại người nhận:</dt>
+                        <dd class="col-sm-8">
+                            <span class="badge bg-info">
+                                @(getRecipientTypeText?.Invoke(Model.RecipientType) ?? Model.RecipientType.ToString())
+                            </span>
+                        </dd>
+
+                        <dt class="col-sm-4">Số tiền:</dt>
+                        <dd class="col-sm-8">
+                            <h4 class="text-primary mb-0">@Model.Amount.ToString("N0") VNĐ</h4>
+                        </dd>
+
+                        <dt class="col-sm-4">Trạng thái:</dt>
+                        <dd class="col-sm-8">
+                            <span class="badge bg-@statusClass fs-6">
+                                @(getStatusText?.Invoke(Model.Status) ?? Model.Status.ToString())
+                            </span>
+                        </dd>
+
+                        @if (Model.ProcessedAt.HasValue)
+                        {
+                            <dt class="col-sm-4">Ngày xử lý:</dt>
+                            <dd class="col-sm-8">@Model.ProcessedAt.Value.ToString("dd/MM/yyyy HH:mm:ss")</dd>
+                        }
+
+                        @if (!string.IsNullOrEmpty(Model.TransactionReference))
+                        {
+                            <dt class="col-sm-4">Mã giao dịch:</dt>
+                            <dd class="col-sm-8"><code>@Model.TransactionReference</code></dd>
+                        }
+
+                        @if (!string.IsNullOrEmpty(Model.Notes))
+                        {
+                            <dt class="col-sm-4">Ghi chú:</dt>
+                            <dd class="col-sm-8">@Model.Notes</dd>
+                        }
+
+                        @if (!string.IsNullOrEmpty(Model.ErrorMessage))
+                        {
+                            <dt class="col-sm-4">Lỗi:</dt>
+                            <dd class="col-sm-8">
+                                <div class="alert alert-danger mb-0">
+                                    @Model.ErrorMessage
+                                </div>
+                            </dd>
+                        }
+
+                        <dt class="col-sm-4">Ngày tạo:</dt>
+                        <dd class="col-sm-8">@Model.CreatedAt.ToString("dd/MM/yyyy HH:mm:ss")</dd>
+
+                        <dt class="col-sm-4">Cập nhật:</dt>
+                        <dd class="col-sm-8">@Model.UpdatedAt.ToString("dd/MM/yyyy HH:mm:ss")</dd>
+                    </dl>
+
+                    <!-- Actions -->
+                    @if (Model.Status == PaymentDistributionStatus.Pending)
+                    {
+                        <div class="border-top pt-3 mt-3">
+                            <h5>Thao tác</h5>
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <form asp-action="MarkCompleted" method="post">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="id" value="@Model.PaymentDistributionId" />
+                                        <div class="mb-2">
+                                            <label class="form-label">Mã giao dịch</label>
+                                            <input type="text" name="transactionReference" class="form-control" 
+                                                   placeholder="Nhập mã giao dịch" />
+                                        </div>
+                                        <button type="submit" class="btn btn-success w-100"
+                                                onclick="return confirm('Xác nhận đánh dấu hoàn thành?')">
+                                            <i class="fas fa-check-circle me-2"></i>Đánh dấu hoàn thành
+                                        </button>
+                                    </form>
+                                </div>
+                                <div class="col-md-6">
+                                    <form asp-action="MarkFailed" method="post">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="id" value="@Model.PaymentDistributionId" />
+                                        <div class="mb-2">
+                                            <label class="form-label">Lý do thất bại</label>
+                                            <input type="text" name="errorMessage" class="form-control"
+                                                   placeholder="Nhập lý do" required />
+                                        </div>
+                                        <button type="submit" class="btn btn-danger w-100"
+                                                onclick="return confirm('Xác nhận đánh dấu thất bại?')">
+                                            <i class="fas fa-times-circle me-2"></i>Đánh dấu thất bại
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+
+            <!-- All Distributions for this Payment -->
+            @if (allDistributions.Any())
+            {
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-list me-2"></i>
+                            Tất cả phân phối cho Payment #@Model.PaymentId
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Người nhận</th>
+                                        <th>Loại</th>
+                                        <th>Số tiền</th>
+                                        <th>Trạng thái</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var dist in allDistributions)
+                                    {
+                                        var distStatusClass = dist.Status switch
+                                        {
+                                            PaymentDistributionStatus.Completed => "success",
+                                            PaymentDistributionStatus.Failed => "danger",
+                                            _ => "warning"
+                                        };
+
+                                        <tr class="@(dist.PaymentDistributionId == Model.PaymentDistributionId ? "table-active" : "")">
+                                            <td><strong>#@dist.PaymentDistributionId</strong></td>
+                                            <td>
+                                                @if (dist.RecipientType == RecipientType.Platform)
+                                                {
+                                                    <span class="badge bg-success">PLATFORM</span>
+                                                }
+                                                else
+                                                {
+                                                    @(dist.Recipient?.FullName ?? dist.RecipientId)
+                                                }
+                                            </td>
+                                            <td>
+                                                @(getRecipientTypeText?.Invoke(dist.RecipientType) ?? dist.RecipientType.ToString())
+                                            </td>
+                                            <td><strong>@dist.Amount.ToString("N0") VNĐ</strong></td>
+                                            <td>
+                                                <span class="badge bg-@distStatusClass">
+                                                    @(getStatusText?.Invoke(dist.Status) ?? dist.Status.ToString())
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    }
+                                    <tr class="table-secondary">
+                                        <td colspan="3"><strong>TỔNG CỘNG</strong></td>
+                                        <td colspan="2">
+                                            <strong class="text-primary">
+                                                @allDistributions.Sum(d => d.Amount).ToString("N0") VNĐ
+                                            </strong>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+
+        <!-- Right Column: Payment Info -->
+        <div class="col-lg-4">
+            @if (payment != null)
+            {
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-money-bill-wave me-2"></i>
+                            Thông tin Payment
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <dl class="mb-0">
+                            <dt>Payment ID:</dt>
+                            <dd><strong>#@payment.PaymentId</strong></dd>
+
+                            <dt>Tổng số tiền:</dt>
+                            <dd><h5 class="text-success">@payment.Amount.ToString("N0") VNĐ</h5></dd>
+
+                            <dt>Platform Fee:</dt>
+                            <dd>@payment.PlatformFee.ToString("N0") VNĐ</dd>
+
+                            <dt>Owner Revenue:</dt>
+                            <dd>@payment.OwnerRevenue.ToString("N0") VNĐ</dd>
+
+                            @if (payment.DriverRevenue.HasValue)
+                            {
+                                <dt>Driver Revenue:</dt>
+                                <dd>@payment.DriverRevenue.Value.ToString("N0") VNĐ</dd>
+                            }
+
+                            <dt>Commission Rate:</dt>
+                            <dd>@((payment.CommissionRate * 100).ToString("F1"))%</dd>
+
+                            <dt>Ngày thanh toán:</dt>
+                            <dd>@payment.PaymentDate.ToString("dd/MM/yyyy HH:mm")</dd>
+                        </dl>
+
+                        <a asp-controller="Payments" asp-action="Details" asp-route-id="@payment.PaymentId"
+                           class="btn btn-outline-primary w-100 mt-3">
+                            <i class="fas fa-eye me-2"></i>Xem chi tiết Payment
+                        </a>
+                    </div>
+                </div>
+            }
+
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-info-circle me-2"></i>
+                        Hướng dẫn
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <h6>Đánh dấu hoàn thành:</h6>
+                    <p class="small">Sử dụng khi đã chuyển tiền thành công cho người nhận. Nhập mã giao dịch để theo dõi.</p>
+
+                    <h6 class="mt-3">Đánh dấu thất bại:</h6>
+                    <p class="small">Sử dụng khi việc chuyển tiền thất bại. Nhập lý do để ghi nhận.</p>
+
+                    <div class="alert alert-warning small mb-0">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <strong>Lưu ý:</strong> Chỉ có thể thay đổi trạng thái của các phân phối đang ở trạng thái "Chờ xử lý".
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

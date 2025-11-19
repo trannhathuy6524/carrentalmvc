@@ -1,0 +1,317 @@
+﻿@using carrentalmvc.Models
+@using carrentalmvc.Models.Enums
+@model List<Rental>
+@{
+    ViewData["Title"] = "Đơn thuê của tôi";
+
+    // Get data from ViewBag
+    var status = ViewBag.Status as RentalStatus?;
+    var pageNumber = (int)(ViewBag.PageNumber ?? 1);
+    var pageSize = (int)(ViewBag.PageSize ?? 10);
+    var totalCount = (int)(ViewBag.TotalCount ?? 0);
+    var totalPages = (int)(ViewBag.TotalPages ?? 0);
+    var hasPreviousPage = (bool)(ViewBag.HasPreviousPage ?? false);
+    var hasNextPage = (bool)(ViewBag.HasNextPage ?? false);
+
+    var getRentalStatusText = ViewBag.GetRentalStatusText as Func<RentalStatus, string>;
+    var canCancelRental = ViewBag.CanCancelRental as Func<Rental, bool>;
+}
+
+<div class="page-header">
+    <h1 class="page-title">Đơn thuê của tôi</h1>
+    <p class="page-subtitle">Quản lý tất cả các đơn thuê xe của bạn</p>
+</div>
+
+<!-- Statistics Cards -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card bg-warning bg-opacity-10 border-warning">
+            <div class="card-body text-center">
+                <h3 class="mb-0">@Model.Count(r => r.Status == RentalStatus.Pending)</h3>
+                <small class="text-muted">Chờ xác nhận</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-info bg-opacity-10 border-info">
+            <div class="card-body text-center">
+                <h3 class="mb-0">@Model.Count(r => r.Status == RentalStatus.Confirmed)</h3>
+                <small class="text-muted">Đã xác nhận</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-success bg-opacity-10 border-success">
+            <div class="card-body text-center">
+                <h3 class="mb-0">@Model.Count(r => r.Status == RentalStatus.Active)</h3>
+                <small class="text-muted">Đang thuê</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-primary bg-opacity-10 border-primary">
+            <div class="card-body text-center">
+                <h3 class="mb-0">@Model.Count(r => r.Status == RentalStatus.Completed)</h3>
+                <small class="text-muted">Hoàn thành</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Filter Section -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="get" class="row g-3 align-items-end">
+            <div class="col-md-3">
+                <label for="status" class="form-label">Trạng thái</label>
+                <select class="form-select" id="status" name="status">
+                    <option value="">Tất cả trạng thái</option>
+                    <option value="@RentalStatus.Pending" selected="@(status == RentalStatus.Pending)">Chờ xác nhận</option>
+                    <option value="@RentalStatus.Confirmed" selected="@(status == RentalStatus.Confirmed)">Đã xác nhận</option>
+                    <option value="@RentalStatus.Active" selected="@(status == RentalStatus.Active)">Đang thuê</option>
+                    <option value="@RentalStatus.Completed" selected="@(status == RentalStatus.Completed)">Hoàn thành</option>
+                    <option value="@RentalStatus.Cancelled" selected="@(status == RentalStatus.Cancelled)">Đã hủy</option>
+                    <option value="@RentalStatus.Overdue" selected="@(status == RentalStatus.Overdue)">Quá hạn</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-search me-2"></i>Lọc
+                </button>
+                @if (status.HasValue)
+                {
+                    <a asp-action="Index" class="btn btn-outline-secondary ms-2">
+                        <i class="fas fa-times"></i>
+                    </a>
+                }
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Rentals List -->
+<div class="card">
+    <div class="card-header">
+        <div class="d-flex justify-content-between align-items-center">
+            <h6 class="mb-0">Danh sách đơn thuê</h6>
+            <span class="badge bg-primary">Tổng: @totalCount</span>
+        </div>
+    </div>
+    <div class="card-body">
+        @if (Model.Any())
+        {
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Mã đơn</th>
+                            <th>Xe</th>
+                            <th>Thời gian thuê</th>
+                            <th>Tổng tiền</th>
+                            <th>Trạng thái</th>
+                            <th>Ngày tạo</th>
+                            <th>Thao tác</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var rental in Model)
+                        {
+                            var primaryImage = rental.Car?.CarImages?.FirstOrDefault(img => img.IsPrimary);
+                            var carImageUrl = primaryImage?.ImageUrl ?? rental.Car?.CarImages?.FirstOrDefault()?.ImageUrl;
+                            var totalDays = (int)(rental.EndDate - rental.StartDate).TotalDays;
+                            var canCancel = canCancelRental != null ? canCancelRental(rental) : false;
+
+                            <tr>
+                                <td>
+                                    <strong>#@rental.RentalId</strong>
+                                    <br>
+                                    <small class="text-muted">@totalDays ngày</small>
+                                </td>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        @if (!string.IsNullOrEmpty(carImageUrl))
+                                        {
+                                            <img src="@carImageUrl" alt="@rental.Car?.Name" class="rounded me-3" width="50" height="40" style="object-fit: cover;">
+                                        }
+                                        else
+                                        {
+                                            <div class="bg-light rounded me-3 d-flex align-items-center justify-content-center" style="width: 50px; height: 40px;">
+                                                <i class="fas fa-car text-muted"></i>
+                                            </div>
+                                        }
+                                        <div>
+                                            <div class="fw-bold">@(rental.Car?.Name ?? "N/A")</div>
+                                            <small class="text-muted">@(rental.Car?.Brand?.Name ?? "N/A")</small>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div>
+                                        <i class="fas fa-calendar-check text-success me-1"></i>
+                                        <strong>@rental.StartDate.ToString("dd/MM/yyyy HH:mm")</strong>
+                                    </div>
+                                    <div>
+                                        <i class="fas fa-calendar-times text-danger me-1"></i>
+                                        <small class="text-muted">@rental.EndDate.ToString("dd/MM/yyyy HH:mm")</small>
+                                    </div>
+                                    @if (rental.Status == RentalStatus.Active && rental.EndDate < DateTime.Now)
+                                    {
+                                        <small class="badge bg-danger">Quá hạn trả</small>
+                                    }
+                                </td>
+                                <td>
+                                    <strong class="text-success">@rental.TotalPrice.ToString("N0") VNĐ</strong>
+                                    @if (rental.Deposit.HasValue && rental.Deposit > 0)
+                                    {
+                                        <br>
+                                        <small class="text-muted">Cọc: @rental.Deposit.Value.ToString("N0") VNĐ</small>
+                                    }
+                                </td>
+                                <td>
+                                    <span class="badge bg-@(GetRentalStatusBadgeClass(rental.Status))">
+                                        @(getRentalStatusText != null ? getRentalStatusText(rental.Status) : rental.Status.ToString())
+                                    </span>
+                                </td>
+                                <td>
+                                    <small>@rental.CreatedAt.ToString("dd/MM/yyyy HH:mm")</small>
+                                </td>
+                                <td>
+                                    <div class="btn-group btn-group-sm">
+                                        <a asp-action="Details" asp-route-id="@rental.RentalId" class="btn btn-outline-primary" title="Xem chi tiết">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                        @if (canCancel)
+                                        {
+                                            <button type="button" class="btn btn-outline-danger" onclick="confirmCancel(@rental.RentalId)" title="Hủy đơn">
+                                                <i class="fas fa-times"></i>
+                                            </button>
+                                        }
+                                        @if (rental.Status == RentalStatus.Completed && !rental.Car?.CarFeatures?.Any(cf => cf.Feature.Name == "Reviewed") == true)
+                                        {
+                                            <a asp-controller="Reviews" asp-action="Create" asp-route-carId="@rental.CarId" class="btn btn-outline-warning" title="Đánh giá">
+                                                <i class="fas fa-star"></i>
+                                            </a>
+                                        }
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Pagination -->
+            @if (totalPages > 1)
+            {
+                <nav aria-label="Phân trang" class="mt-3">
+                    <ul class="pagination justify-content-center">
+                        <li class="page-item @(!hasPreviousPage ? "disabled" : "")">
+                            <a class="page-link" asp-route-page="@(pageNumber - 1)" asp-route-status="@status">
+                                <i class="fas fa-chevron-left"></i>
+                            </a>
+                        </li>
+
+                        @for (int i = Math.Max(1, pageNumber - 2); i <= Math.Min(totalPages, pageNumber + 2); i++)
+                        {
+                            <li class="page-item @(i == pageNumber ? "active" : "")">
+                                <a class="page-link" asp-route-page="@i" asp-route-status="@status">@i</a>
+                            </li>
+                        }
+
+                        <li class="page-item @(!hasNextPage ? "disabled" : "")">
+                            <a class="page-link" asp-route-page="@(pageNumber + 1)" asp-route-status="@status">
+                                <i class="fas fa-chevron-right"></i>
+                            </a>
+                        </li>
+                    </ul>
+                </nav>
+            }
+        }
+        else
+        {
+            <div class="text-center py-5">
+                <i class="fas fa-car fa-3x text-muted mb-3"></i>
+                <h5 class="text-muted">Chưa có đơn thuê nào</h5>
+                <p class="text-muted">
+                    @if (status.HasValue)
+                    {
+                        <text>Không có đơn thuê nào ở trạng thái này.</text>
+                    }
+                    else
+                    {
+                        <text>Bạn chưa có đơn thuê xe nào. Hãy bắt đầu thuê xe ngay!</text>
+                    }
+                </p>
+                @if (!status.HasValue)
+                {
+                    <a href="@Url.Action("Index", "Cars", new { area = "Customer" })" class="btn btn-primary">
+                        <i class="fas fa-search me-2"></i>Tìm xe thuê
+                    </a>
+                }
+                else
+                {
+                    <a asp-action="Index" class="btn btn-outline-secondary">
+                        <i class="fas fa-list me-2"></i>Xem tất cả
+                    </a>
+                }
+            </div>
+        }
+    </div>
+</div>
+
+<!-- Cancel Modal -->
+<div class="modal fade" id="cancelModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Hủy đơn thuê</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="cancelForm" method="post">
+                @Html.AntiForgeryToken()
+                <div class="modal-body">
+                    <p>Bạn có chắc chắn muốn hủy đơn thuê này không?</p>
+                    <div class="mb-3">
+                        <label for="reason" class="form-label">Lý do hủy (tùy chọn)</label>
+                        <textarea class="form-control" id="reason" name="reason" rows="3" placeholder="Nhập lý do hủy đơn thuê..."></textarea>
+                    </div>
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <strong>Lưu ý:</strong> Chỉ có thể hủy đơn thuê trước 24 giờ so với thời gian bắt đầu.
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+                    <button type="submit" class="btn btn-danger">Xác nhận hủy</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function confirmCancel(rentalId) {
+            const form = document.getElementById('cancelForm');
+            form.action = '@Url.Action("Cancel", new { id = "" })'.replace('id=', 'id=' + rentalId);
+            const modal = new bootstrap.Modal(document.getElementById('cancelModal'));
+            modal.show();
+        }
+    </script>
+}
+
+@functions {
+    private string GetRentalStatusBadgeClass(RentalStatus status)
+    {
+        return status switch
+        {
+            RentalStatus.Pending => "warning",
+            RentalStatus.Confirmed => "info",
+            RentalStatus.Active => "success",
+            RentalStatus.Completed => "primary",
+            RentalStatus.Cancelled => "secondary",
+            RentalStatus.Overdue => "danger",
+            _ => "secondary"
+        };
+    }
+}

@@ -1,0 +1,196 @@
+@model IEnumerable<CarOwnerRequest>
+@{
+    ViewData["Title"] = "Quản lý yêu cầu làm chủ xe";
+    Layout = "~/Areas/Admin/Views/Shared/_AdminLayout.cshtml";
+
+    var status = ViewBag.Status as CarOwnerRequestStatus?;
+    var pendingCount = Model.Count(r => r.Status == CarOwnerRequestStatus.Pending);
+    var approvedCount = Model.Count(r => r.Status == CarOwnerRequestStatus.Approved);
+    var rejectedCount = Model.Count(r => r.Status == CarOwnerRequestStatus.Rejected);
+}
+
+<div class="container-fluid">
+    <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+        <h1 class="h2">
+            <i class="fas fa-car-alt"></i> Quản lý yêu cầu làm chủ xe
+        </h1>
+        <div class="btn-toolbar mb-2 mb-md-0">
+            <div class="btn-group me-2">
+                <a asp-action="Index" class="btn btn-sm @(status == null ? "btn-primary" : "btn-outline-primary")">
+                    <i class="fas fa-list"></i> Tất cả (@Model.Count())
+                </a>
+                <a asp-action="Index" asp-route-status="@CarOwnerRequestStatus.Pending" 
+                   class="btn btn-sm @(status == CarOwnerRequestStatus.Pending ? "btn-warning" : "btn-outline-warning")">
+                    <i class="fas fa-clock"></i> Chờ duyệt (@pendingCount)
+                </a>
+                <a asp-action="Index" asp-route-status="@CarOwnerRequestStatus.Approved" 
+                   class="btn btn-sm @(status == CarOwnerRequestStatus.Approved ? "btn-success" : "btn-outline-success")">
+                    <i class="fas fa-check"></i> Đã duyệt (@approvedCount)
+                </a>
+                <a asp-action="Index" asp-route-status="@CarOwnerRequestStatus.Rejected" 
+                   class="btn btn-sm @(status == CarOwnerRequestStatus.Rejected ? "btn-danger" : "btn-outline-danger")">
+                    <i class="fas fa-times"></i> Từ chối (@rejectedCount)
+                </a>
+            </div>
+        </div>
+    </div>
+
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show">
+            <i class="fas fa-check-circle"></i> @TempData["SuccessMessage"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show">
+            <i class="fas fa-exclamation-circle"></i> @TempData["ErrorMessage"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    @if (!Model.Any())
+    {
+        <div class="text-center py-5">
+            <i class="fas fa-inbox fa-4x text-muted mb-3"></i>
+            <h4 class="text-muted">Chưa có yêu cầu nào</h4>
+        </div>
+    }
+    else
+    {
+        <div class="card shadow">
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Ngày gửi</th>
+                                <th>Người gửi</th>
+                                <th>Thông tin liên hệ</th>
+                                <th>Số xe</th>
+                                <th>Trạng thái</th>
+                                <th>Thao tác</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var request in Model)
+                            {
+                                <tr>
+                                    <td>
+                                        <small class="text-muted">
+                                            @request.RequestedAt.ToString("dd/MM/yyyy HH:mm")
+                                        </small>
+                                    </td>
+                                    <td>
+                                        <strong>@request.FullName</strong><br/>
+                                        <small class="text-muted">User ID: @request.User?.UserName</small>
+                                    </td>
+                                    <td>
+                                        <small>
+                                            <i class="fas fa-envelope"></i> @request.Email<br/>
+                                            <i class="fas fa-phone"></i> @request.PhoneNumber<br/>
+                                            <i class="fas fa-id-card"></i> @request.NationalId
+                                        </small>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-info">@request.ExpectedCarCount xe</span>
+                                    </td>
+                                    <td>
+                                        @switch (request.Status)
+                                        {
+                                            case CarOwnerRequestStatus.Pending:
+                                                <span class="badge bg-warning text-dark">
+                                                    <i class="fas fa-clock"></i> Chờ duyệt
+                                                </span>
+                                                break;
+                                            case CarOwnerRequestStatus.Approved:
+                                                <span class="badge bg-success">
+                                                    <i class="fas fa-check-circle"></i> Đã duyệt
+                                                </span>
+                                                if (request.ProcessedAt.HasValue)
+                                                {
+                                                    <br/>
+                                                    <small class="text-muted">
+                                                        @request.ProcessedAt.Value.ToString("dd/MM/yyyy")
+                                                    </small>
+                                                }
+                                                break;
+                                            case CarOwnerRequestStatus.Rejected:
+                                                <span class="badge bg-danger">
+                                                    <i class="fas fa-times-circle"></i> Từ chối
+                                                </span>
+                                                break;
+                                        }
+                                    </td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm" role="group">
+                                            <a asp-action="Details" asp-route-id="@request.CarOwnerRequestId" 
+                                               class="btn btn-outline-info" title="Xem chi tiết">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                            @if (request.Status == CarOwnerRequestStatus.Pending)
+                                            {
+                                                <form asp-action="Approve" asp-route-id="@request.CarOwnerRequestId" method="post" class="d-inline">
+                                                    @Html.AntiForgeryToken()
+                                                    <button type="submit" class="btn btn-outline-success" title="Duyệt"
+                                                            onclick="return confirm('Bạn có chắc muốn duyệt yêu cầu này?')">
+                                                        <i class="fas fa-check"></i>
+                                                    </button>
+                                                </form>
+                                                <button type="button" class="btn btn-outline-danger" title="Từ chối"
+                                                        data-bs-toggle="modal" data-bs-target="#rejectModal@(request.CarOwnerRequestId)">
+                                                    <i class="fas fa-times"></i>
+                                                </button>
+                                            }
+                                        </div>
+                                    </td>
+                                </tr>
+
+                                <!-- Reject Modal -->
+                                @if (request.Status == CarOwnerRequestStatus.Pending)
+                                {
+                                    <div class="modal fade" id="rejectModal@(request.CarOwnerRequestId)" tabindex="-1">
+                                        <div class="modal-dialog">
+                                            <div class="modal-content">
+                                                <div class="modal-header bg-danger text-white">
+                                                    <h5 class="modal-title">Từ chối yêu cầu</h5>
+                                                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                                                </div>
+                                                <form asp-action="Reject" asp-route-id="@request.CarOwnerRequestId" method="post">
+                                                    @Html.AntiForgeryToken()
+                                                    <div class="modal-body">
+                                                        <p><strong>Người gửi:</strong> @request.FullName</p>
+                                                        <div class="mb-3">
+                                                            <label for="reason@(request.CarOwnerRequestId)" class="form-label">
+                                                                Lý do từ chối <span class="text-danger">*</span>
+                                                            </label>
+                                                            <textarea name="reason" id="reason@(request.CarOwnerRequestId)" 
+                                                                      class="form-control" rows="3" required
+                                                                      placeholder="Nhập lý do từ chối..."></textarea>
+                                                        </div>
+                                                        <div class="alert alert-warning mb-0">
+                                                            <i class="fas fa-exclamation-triangle"></i>
+                                                            Người dùng sẽ thấy lý do này trong trang trạng thái yêu cầu.
+                                                        </div>
+                                                    </div>
+                                                    <div class="modal-footer">
+                                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                                                        <button type="submit" class="btn btn-danger">
+                                                            <i class="fas fa-times"></i> Xác nhận từ chối
+                                                        </button>
+                                                    </div>
+                                                </form>
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    }
+</div>

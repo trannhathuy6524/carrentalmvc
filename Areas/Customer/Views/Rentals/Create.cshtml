@@ -1,0 +1,1037 @@
+﻿@using carrentalmvc.Models
+@using carrentalmvc.Models.Enums
+@model Car
+@{
+    ViewData["Title"] = "Đặt thuê xe - " + Model.Name;
+
+    // Get data from ViewBag
+    var carImageUrl = ViewBag.CarImageUrl as string;
+    var brandName = ViewBag.BrandName as string ?? "N/A";
+    var categoryName = ViewBag.CategoryName as string ?? "N/A";
+    var defaultStartDate = (DateTime)(ViewBag.DefaultStartDate ?? DateTime.Today.AddDays(1));
+    var defaultEndDate = (DateTime)(ViewBag.DefaultEndDate ?? DateTime.Today.AddDays(3));
+    var driverFeePerDay = (decimal)(ViewBag.DriverFeePerDay ?? 500000m); // ✅ 500,000 VNĐ/ngày (8 tiếng)
+
+    // Delivery configuration
+    var maxDeliveryDistance = Model.MaxDeliveryDistance ?? 50;
+    var pricePerKmDelivery = Model.PricePerKmDelivery ?? 5000m;
+    var deliveryBaseFee = 50000m;
+    var hasDeliveryService = maxDeliveryDistance > 0;
+
+    // Car location with proper null handling
+    var carLocation = Model.Location ?? "Vị trí chưa cập nhật";
+    var carLat = Model.Latitude ?? 21.0285;
+    var carLng = Model.Longitude ?? 105.8542;
+    var hasValidCarLocation = Model.Latitude.HasValue && Model.Longitude.HasValue;
+}
+
+<!-- Leaflet CSS - MUST BE IN HEAD -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+      crossorigin="" />
+
+<!-- Status Alerts -->
+@if (ViewBag.IsRentedCar == true)
+{
+    <div class="alert alert-warning alert-dismissible fade show">
+        <i class="fas fa-clock me-2"></i>@ViewBag.RentedWarning
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+@if (TempData["WarningMessage"] != null)
+{
+    <div class="alert alert-warning alert-dismissible fade show">
+        <i class="fas fa-exclamation-triangle me-2"></i>@TempData["WarningMessage"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+@if (TempData["ErrorMessage"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show">
+        <i class="fas fa-exclamation-circle me-2"></i>@TempData["ErrorMessage"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+<div class="rental-booking-page">
+    <div class="container">
+        <!-- Breadcrumb -->
+        <nav aria-label="breadcrumb" class="mb-4">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a asp-area="Customer" asp-controller="Cars" asp-action="Index">Danh sách xe</a></li>
+                <li class="breadcrumb-item"><a asp-area="Customer" asp-controller="Cars" asp-action="Details" asp-route-id="@Model.CarId">@Model.Name</a></li>
+                <li class="breadcrumb-item active">Đặt thuê</li>
+            </ol>
+        </nav>
+
+        <div class="row">
+            <!-- Car Summary Sidebar -->
+            <div class="col-lg-4">
+                <div class="car-summary-card sticky-top">
+                    <!-- Car Image -->
+                    <div class="car-image">
+                        @if (!string.IsNullOrEmpty(carImageUrl))
+                        {
+                            <img src="@carImageUrl" alt="@Model.Name" class="img-fluid">
+                        }
+                        else
+                        {
+                            <div class="no-image">
+                                <i class="fas fa-car"></i>
+                                <p class="mt-2 text-muted">Chưa có hình ảnh</p>
+                            </div>
+                        }
+                    </div>
+
+                    <!-- Car Info -->
+                    <div class="car-info">
+                        <h4>@Model.Name</h4>
+                        <p class="text-muted mb-2">
+                            <span class="badge bg-primary">@brandName</span>
+                            <span class="badge bg-secondary">@categoryName</span>
+                        </p>
+                        <div class="price-info">
+                            <span class="price">@Model.PricePerDay.ToString("N0") VNĐ</span>
+                            <span class="unit">/ngày</span>
+                        </div>
+                        @if (Model.PricePerHour.HasValue && Model.PricePerHour > 0)
+                        {
+                            <div class="price-info-secondary">
+                                <span class="price-hour">@Model.PricePerHour.Value.ToString("N0") VNĐ/giờ</span>
+                            </div>
+                        }
+                    </div>
+
+                    <!-- Booking Summary -->
+                    <div class="booking-summary">
+                        <h5><i class="fas fa-calculator me-2"></i>Tóm tắt chi phí</h5>
+
+                        <div class="summary-item">
+                            <span>Thời gian thuê:</span>
+                            <span id="summaryDuration">2 ngày</span>
+                        </div>
+
+                        <div class="summary-item">
+                            <span>Thuê xe:</span>
+                            <span id="summaryCarPrice">@((Model.PricePerDay * 2).ToString("N0")) VNĐ</span>
+                        </div>
+
+                        <div class="summary-item driver-fee" style="display: none;">
+                            <span>Phí tài xế:</span>
+                            <span id="summaryDriverFee">0 VNĐ</span>
+                        </div>
+
+                        <div class="summary-item delivery-fee">
+                            <span>Phí giao xe (<span id="deliveryDistance">chưa chọn</span>):</span>
+                            <span id="summaryDeliveryFee">@deliveryBaseFee.ToString("N0") VNĐ</span>
+                        </div>
+
+                        <hr class="my-3">
+
+                        <div class="summary-total">
+                            <span><strong>Tổng cộng:</strong></span>
+                            <span id="summaryTotal"><strong>@((Model.PricePerDay * 2 + deliveryBaseFee).ToString("N0")) VNĐ</strong></span>
+                        </div>
+
+                        <div class="mt-3">
+                            <small class="text-muted">
+                                <i class="fas fa-info-circle me-1"></i>
+                                Giá đã bao gồm các loại phí. Thanh toán khi nhận xe.
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Booking Form -->
+            <div class="col-lg-8">
+                <div class="booking-form-card">
+                    <div class="form-header text-center mb-4">
+                        <h2><i class="fas fa-calendar-check me-2"></i>Thông tin đặt thuê xe</h2>
+                        <p class="text-muted">Vui lòng điền đầy đủ thông tin để hoàn tất việc đặt thuê xe</p>
+                    </div>
+
+                    <form asp-action="Create" method="post" id="rentalBookingForm">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="carId" value="@Model.CarId" />
+                        <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+
+                        <!-- Step 1: Dates & Time -->
+                        <div class="form-step active">
+                            <div class="step-header">
+                                <div class="step-number">1</div>
+                                <div class="step-info">
+                                    <h4>Chọn thời gian thuê</h4>
+                                    <p class="text-muted">Xác định thời gian bắt đầu và kết thúc thuê xe</p>
+                                </div>
+                            </div>
+
+                            <!-- Rental Type Selection -->
+                            <div class="mb-4">
+                                <label class="form-label fw-bold">
+                                    <i class="fas fa-clock me-1"></i>Loại thuê <span class="text-danger">*</span>
+                                </label>
+                                <div class="btn-group w-100" role="group">
+                                    <input type="radio" class="btn-check" name="rentalType" id="rentalByDay" value="day" checked>
+                                    <label class="btn btn-outline-primary" for="rentalByDay">
+                                        <i class="fas fa-calendar-day me-1"></i>Theo ngày
+                                    </label>
+                                    
+                                    <input type="radio" class="btn-check" name="rentalType" id="rentalByHour" value="hour">
+                                    <label class="btn btn-outline-primary" for="rentalByHour">
+                                        <i class="fas fa-clock me-1"></i>Theo giờ
+                                    </label>
+                                </div>
+                                <small class="text-muted d-block mt-2">
+                                    <i class="fas fa-info-circle me-1"></i>
+                                    <span id="rentalTypeHint">Thuê theo ngày: Tối thiểu 1 ngày (24 giờ)</span>
+                                </small>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="startDate" class="form-label">
+                                            <i class="fas fa-calendar-plus me-1"></i>Ngày giờ nhận xe <span class="text-danger">*</span>
+                                        </label>
+                                        <input type="datetime-local" name="startDate" id="startDate" class="form-control"
+                                               value="@defaultStartDate.ToString("yyyy-MM-ddTHH:mm")" required />
+                                        <div class="form-text">Thời gian sớm nhất: sau 1 giờ nữa</div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="endDate" class="form-label">
+                                            <i class="fas fa-calendar-minus me-1"></i>Ngày giờ trả xe <span class="text-danger">*</span>
+                                        </label>
+                                        <input type="datetime-local" name="endDate" id="endDate" class="form-control"
+                                               value="@defaultEndDate.ToString("yyyy-MM-ddTHH:mm")" required />
+                                        <div class="form-text" id="minDurationText">Tối thiểu thuê 1 ngày</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="alert alert-info mt-3">
+                                <i class="fas fa-clock me-2"></i>
+                                <span id="durationText">Thời gian thuê: <strong>2 ngày</strong></span>
+                                <span id="pricePerUnitText" class="ms-3">
+                                    • Giá: <strong>@Model.PricePerDay.ToString("N0") VNĐ/ngày</strong>
+                                </span>
+                            </div>
+
+                            <!-- Hourly Rental Warning -->
+                            <div class="alert alert-warning" id="hourlyRentalWarning" style="display: none;">
+                                <i class="fas fa-exclamation-triangle me-2"></i>
+                                <strong>Lưu ý thuê theo giờ:</strong>
+                                <ul class="mb-0 mt-2">
+                                    <li>Tối thiểu: 4 giờ</li>
+                                    <li>Tối đa: 23 giờ (Từ 24 giờ trở lên vui lòng chọn thuê theo ngày)</li>
+                                    <li>Giá thuê: <strong>@(Model.PricePerHour.HasValue ? Model.PricePerHour.Value.ToString("N0") : "Chưa hỗ trợ") VNĐ/giờ</strong></li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <!-- Step 2: Service Type -->
+                        <div class="form-step active">
+                            <div class="step-header">
+                                <div class="step-number">2</div>
+                                <div class="step-info">
+                                    <h4>Chọn loại dịch vụ</h4>
+                                    <p class="text-muted">Lựa chọn dịch vụ phù hợp với nhu cầu của bạn</p>
+                                </div>
+                            </div>
+
+                            <div class="service-options">
+                                <div class="service-option">
+                                    <input type="radio" name="serviceType" value="1" id="selfDrive" checked />
+                                    <label for="selfDrive" class="service-card">
+                                        <div class="service-icon"><i class="fas fa-key"></i></div>
+                                        <div class="service-content">
+                                            <h5>Tự lái</h5>
+                                            <p>Bạn tự lái xe, linh hoạt thời gian</p>
+                                            <div class="service-price">Miễn phí</div>
+                                        </div>
+                                    </label>
+                                </div>
+
+                                <div class="service-option">
+                                    <input type="radio" name="serviceType" value="2" id="withDriver" />
+                                    <label for="withDriver" class="service-card">
+                                        <div class="service-icon"><i class="fas fa-user-tie"></i></div>
+                                        <div class="service-content">
+                                            <h5>Có tài xế</h5>
+                                            <p>Tài xế chuyên nghiệp, an toàn</p>
+                                            <div class="service-price">+@driverFeePerDay.ToString("N0") VNĐ/ngày</div>
+                                        </div>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Step 3: Pickup Location -->
+                        <div class="form-step active">
+                            <div class="step-header">
+                                <div class="step-number">3</div>
+                                <div class="step-info">
+                                    <h4>Địa chỉ nhận xe</h4>
+                                    <p class="text-muted">Chọn địa điểm để chủ xe giao xe tận nơi</p>
+                                </div>
+                            </div>
+
+                            <!-- Delivery Info -->
+                            <div class="alert alert-info mb-4">
+                                <h6><i class="fas fa-truck me-2"></i>Thông tin giao xe</h6>
+                                <p class="mb-1"><strong>Vị trí xe:</strong> @carLocation</p>
+                                @if (hasValidCarLocation)
+                                {
+                                    <p class="mb-2"><strong>Tọa độ:</strong> @carLat.ToString("F6"), @carLng.ToString("F6")</p>
+                                }
+                                @if (hasDeliveryService)
+                                {
+                                    <div class="bg-light p-2 rounded">
+                                        <small>
+                                            <i class="fas fa-check-circle text-success me-1"></i>
+                                            Phạm vi giao xe: <strong>@maxDeliveryDistance km</strong> |
+                                            Phí: <strong>@deliveryBaseFee.ToString("N0") VNĐ (≤5km)</strong> +
+                                            <strong>@pricePerKmDelivery.ToString("N0") VNĐ/km (>5km)</strong>
+                                        </small>
+                                    </div>
+                                }
+                                <p class="mb-0 mt-2">
+                                    <strong>Phí giao xe ước tính:</strong>
+                                    <span class="text-success fw-bold" id="deliveryFeeText">@deliveryBaseFee.ToString("N0") VNĐ</span>
+                                </p>
+                            </div>
+
+                            <!-- Quick Location Buttons -->
+                            <div class="mb-3">
+                                <label class="form-label">Chọn nhanh thành phố:</label>
+                                <div class="d-flex flex-wrap gap-2">
+                                    <button type="button" class="btn btn-sm btn-success" id="getCurrentLocationBtn">
+                                        <i class="fas fa-location-arrow me-1"></i>Vị trí hiện tại
+                                    </button>
+                                    @foreach (var loc in new[] {
+                                                                        new { Name = "Hà Nội", Lat = 21.0285, Lng = 105.8542 },
+                                                                        new { Name = "TP.HCM", Lat = 10.8231, Lng = 106.6297 },
+                                                                        new { Name = "Đà Nẵng", Lat = 16.0471, Lng = 108.2068 }
+                                                                        })
+                                    {
+                                        <button type="button" class="btn btn-sm btn-outline-primary customer-btn"
+                                                data-lat="@loc.Lat" data-lng="@loc.Lng" data-name="@loc.Name">
+                                            <i class="fas fa-map-marker-alt me-1"></i>@loc.Name
+                                        </button>
+                                    }
+                                </div>
+                            </div>
+
+                            <!-- Map -->
+                            <div class="mb-3">
+                                <label class="form-label"><i class="fas fa-map me-1"></i>Chọn vị trí chính xác:</label>
+                                <div id="customerMap" class="location-map"></div>
+                                <small class="text-muted">
+                                    <i class="fas fa-hand-pointer me-1"></i>Nhấp vào bản đồ để chọn vị trí giao xe
+                                </small>
+                            </div>
+
+                            <!-- Hidden Fields -->
+                            <input type="hidden" name="customerLatitude" id="customerLatitude" />
+                            <input type="hidden" name="customerLongitude" id="customerLongitude" />
+
+                            <!-- Location Details -->
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label class="form-label"><i class="fas fa-map-pin me-1"></i>Tên địa điểm</label>
+                                        <input type="text" id="customerLocationName" class="form-control" readonly />
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label class="form-label"><i class="fas fa-crosshairs me-1"></i>Tọa độ</label>
+                                        <input type="text" id="customerCoordinates" class="form-control" readonly />
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="customerAddress" class="form-label">
+                                    <i class="fas fa-home me-1"></i>Địa chỉ chi tiết <span class="text-danger">*</span>
+                                </label>
+                                <textarea name="customerAddress" id="customerAddress" class="form-control" rows="3" required
+                                          placeholder="Số nhà, tên đường, quận/huyện..."></textarea>
+                            </div>
+                        </div>
+
+                        <!-- Step 4: Return Location - REMOVED -->
+                        <!-- Mặc định trả xe tại nơi nhận xe -->
+                        <input type="hidden" name="returnLatitude" id="returnLatitude" />
+                        <input type="hidden" name="returnLongitude" id="returnLongitude" />
+                        <input type="hidden" name="returnLocation" id="returnLocation" />
+
+                        <!-- Step 4: Contact Information (số thứ tự đổi từ 5 thành 4) -->
+                        <div class="form-step active">
+                            <div class="step-header">
+                                <div class="step-number">4</div>
+                                <div class="step-info">
+                                    <h4>Thông tin liên hệ</h4>
+                                    <p class="text-muted">Thông tin để chủ xe liên lạc</p>
+                                </div>
+                            </div>
+
+                            <div class="alert alert-info mb-4">
+                                <i class="fas fa-info-circle me-2"></i>
+                                <strong>Lưu ý:</strong> Địa điểm trả xe mặc định là cùng nơi nhận xe. 
+                                Nếu cần thay đổi, vui lòng liên hệ chủ xe qua số điện thoại.
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="contactPhone" class="form-label">
+                                            <i class="fas fa-phone me-1"></i>Số điện thoại <span class="text-danger">*</span>
+                                        </label>
+                                        <input type="tel" name="contactPhone" id="contactPhone" class="form-control"
+                                               placeholder="0xxx xxx xxx" required />
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label class="form-label"><i class="fas fa-user me-1"></i>Họ tên</label>
+                                        <input type="text" class="form-control" value="@User.Identity.Name" readonly />
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="notes" class="form-label"><i class="fas fa-sticky-note me-1"></i>Ghi chú</label>
+                                <textarea name="notes" id="notes" class="form-control" rows="3"
+                                          placeholder="Yêu cầu đặc biệt, lưu ý... (Ví dụ: Cần trả xe ở địa điểm khác)"></textarea>
+                            </div>
+
+                            <div class="p-3 bg-light rounded">
+                                <div class="form-check">
+                                    <input type="checkbox" class="form-check-input" id="agreeTerms" required />
+                                    <label class="form-check-label" for="agreeTerms">
+                                        Tôi đồng ý với <a href="#" target="_blank">Điều khoản sử dụng</a>
+                                        <span class="text-danger">*</span>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Form Actions -->
+                        <div class="mt-4 pt-4 border-top">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <a asp-area="Customer" asp-controller="Cars" asp-action="Details" asp-route-id="@Model.CarId"
+                                   class="btn btn-outline-secondary btn-lg">
+                                    <i class="fas fa-arrow-left me-2"></i>Quay lại
+                                </a>
+
+                                <button type="submit" class="btn btn-primary btn-lg" id="submitBookingBtn">
+                                    <span class="spinner-border spinner-border-sm me-2 d-none" id="submitSpinner"></span>
+                                    <i class="fas fa-check me-2" id="submitIcon"></i>Xác nhận đặt thuê
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- STYLES -->
+<style>
+    .rental-booking-page {
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        min-height: 100vh;
+        padding: 20px 0;
+    }
+
+    .car-summary-card {
+        background: white;
+        border-radius: 15px;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+        overflow: hidden;
+        top: 20px;
+    }
+
+    .car-image {
+        height: 200px;
+        overflow: hidden;
+    }
+
+        .car-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+    .no-image {
+        height: 100%;
+        background: linear-gradient(135deg, #e9ecef, #f8f9fa);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        font-size: 3rem;
+        color: #6c757d;
+    }
+
+    .car-info {
+        padding: 20px;
+        text-align: center;
+        border-bottom: 1px solid #e9ecef;
+    }
+
+    .price-info .price {
+        font-size: 1.8rem;
+        font-weight: 700;
+        color: #28a745;
+    }
+
+    .booking-summary {
+        padding: 20px;
+    }
+
+    .summary-item {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 12px;
+        padding: 5px 0;
+    }
+
+    .summary-total {
+        display: flex;
+        justify-content: space-between;
+        font-size: 1.3rem;
+        font-weight: 700;
+        border-top: 2px solid #e9ecef;
+        padding-top: 15px;
+        margin-top: 15px;
+    }
+
+    .booking-form-card {
+        background: white;
+        border-radius: 15px;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+        padding: 40px;
+    }
+
+    .form-step {
+        margin-bottom: 50px;
+        padding-bottom: 30px;
+        border-bottom: 2px solid #e9ecef;
+    }
+
+        .form-step:last-child {
+            border-bottom: none;
+        }
+
+    .step-header {
+        display: flex;
+        align-items: flex-start;
+        margin-bottom: 25px;
+    }
+
+    .step-number {
+        width: 50px;
+        height: 50px;
+        background: linear-gradient(135deg, #007bff, #0056b3);
+        color: white;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        font-size: 1.2rem;
+        margin-right: 20px;
+        flex-shrink: 0;
+        box-shadow: 0 4px 10px rgba(0,123,255,0.3);
+    }
+
+    .step-info h4 {
+        margin: 0;
+        color: #2c3e50;
+        font-weight: 700;
+    }
+
+    .step-info p {
+        margin: 5px 0 0 0;
+        color: #6c757d;
+    }
+
+    .form-group {
+        margin-bottom: 25px;
+    }
+
+    .form-label {
+        font-weight: 600;
+        color: #495057;
+        margin-bottom: 8px;
+    }
+
+    .form-control {
+        border: 2px solid #e9ecef;
+        border-radius: 8px;
+        padding: 12px 15px;
+        transition: all 0.3s;
+    }
+
+        .form-control:focus {
+            border-color: #007bff;
+            box-shadow: 0 0 0 0.2rem rgba(0,123,255,0.25);
+        }
+
+    .service-options {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 20px;
+    }
+
+    .service-option input[type="radio"] {
+        display: none;
+    }
+
+    .service-card {
+        display: block;
+        padding: 25px;
+        border: 2px solid #e9ecef;
+        border-radius: 15px;
+        cursor: pointer;
+        transition: all 0.3s;
+        text-align: center;
+    }
+
+        .service-card:hover {
+            border-color: #007bff;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,123,255,0.2);
+        }
+
+    .service-option input[type="radio"]:checked + .service-card {
+        border-color: #007bff;
+        background: linear-gradient(135deg, #f8f9ff, #e6f3ff);
+    }
+
+    .service-icon {
+        width: 70px;
+        height: 70px;
+        background: #e9ecef;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 20px;
+        font-size: 1.8rem;
+        color: #6c757d;
+        transition: all 0.3s;
+    }
+
+    .service-option input[type="radio"]:checked + .service-card .service-icon {
+        background: linear-gradient(135deg, #007bff, #0056b3);
+        color: white;
+        transform: scale(1.1);
+    }
+
+    /* ✅ RENTAL TYPE BUTTONS */
+    .btn-group .btn-check:checked + .btn {
+        background-color: #007bff;
+        border-color: #007bff;
+        color: white;
+    }
+
+    .btn-group .btn-outline-primary:hover {
+        background-color: #e7f1ff;
+    }
+
+    /* ✅ MAP STYLING - QUAN TRỌNG! */
+    .location-map {
+        height: 400px !important;
+        min-height: 400px;
+        width: 100%;
+        border-radius: 10px;
+        border: 2px solid #e9ecef;
+        overflow: hidden;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        position: relative;
+        z-index: 1;
+    }
+
+    /* ✅ THÊM CSS CHO MARKERS */
+    .leaflet-marker-icon {
+        background: transparent !important;
+        border: none !important;
+    }
+
+    .leaflet-div-icon {
+        background: transparent !important;
+        border: none !important;
+    }
+
+        /* Fix for FontAwesome icons in markers */
+        .leaflet-marker-icon i,
+        .leaflet-div-icon i {
+            display: block;
+            line-height: 1;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+
+    @@media (max-width: 768px) {
+        .location-map
+
+    {
+        height: 300px !important;
+        min-height: 300px;
+    }
+
+    .booking-form-card {
+        padding: 20px;
+    }
+
+    .service-options {
+        grid-template-columns: 1fr;
+    }
+
+    }
+</style>
+<!-- Leaflet JS -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+        crossorigin=""></script>
+
+<script>
+    (function() {
+        'use strict';
+
+        function waitForLeaflet(callback, attempts = 0) {
+            if (typeof L !== 'undefined') {
+                console.log('✅ Leaflet loaded, version:', L.version);
+                callback();
+            } else if (attempts < 50) {
+                setTimeout(() => waitForLeaflet(callback, attempts + 1), 100);
+            } else {
+                console.error('❌ Leaflet failed to load');
+                alert('Không thể tải thư viện bản đồ. Vui lòng tải lại trang.');
+            }
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', () => {
+                console.log('📄 DOM loaded');
+                waitForLeaflet(init);
+            });
+        } else {
+            console.log('📄 DOM already loaded');
+            waitForLeaflet(init);
+        }
+
+        function init() {
+            console.log('🚀 Initializing Car Rental Booking System');
+
+            const CONFIG = {
+                pricePerDay: @Model.PricePerDay.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                pricePerHour: @(Model.PricePerHour.HasValue ? Model.PricePerHour.Value.ToString(System.Globalization.CultureInfo.InvariantCulture) : "0"),
+                hasPricePerHour: @(Model.PricePerHour.HasValue && Model.PricePerHour > 0 ? "true" : "false"),
+                driverFeePerDay: 500000, // ✅ 500,000 VNĐ/ngày (8 tiếng)
+                driverFeePerHour: 62500, // ✅ 500,000 / 8 = 62,500 VNĐ/giờ
+                deliveryBaseFee: @deliveryBaseFee.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                maxDeliveryDistance: @maxDeliveryDistance,
+                pricePerKmDelivery: @pricePerKmDelivery.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                hasDeliveryService: @hasDeliveryService.ToString().ToLower(),
+                carLat: @carLat.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                carLng: @carLng.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                carLocation: '@Html.Raw(Html.Encode(carLocation))',
+                hasValidCarLocation: @hasValidCarLocation.ToString().ToLower(),
+                carId: @Model.CarId,
+                freeDistance: 5
+            };
+
+            console.log('📊 Config:', CONFIG);
+
+            const state = {
+                customerMap: null,
+                returnMap: null,
+                customerMarker: null,
+                returnMarker: null,
+                currentDeliveryFee: parseFloat(CONFIG.deliveryBaseFee),
+                rentalType: 'day' // 'day' or 'hour'
+            };
+
+            function calculateDistance(lat1, lon1, lat2, lon2) {
+                const R = 6371;
+                const dLat = (lat2 - lat1) * Math.PI / 180;
+                const dLon = (lon2 - lon1) * Math.PI / 180;
+                const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                          Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                          Math.sin(dLon/2) * Math.sin(dLon/2);
+                const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+                return R * c;
+            }
+
+            function calculateDeliveryFee(distanceKm) {
+                if (distanceKm > CONFIG.maxDeliveryDistance) return -1;
+                if (distanceKm <= CONFIG.freeDistance) return parseFloat(CONFIG.deliveryBaseFee);
+                const extraKm = distanceKm - CONFIG.freeDistance;
+                return Math.round(parseFloat(CONFIG.deliveryBaseFee) + (extraKm * parseFloat(CONFIG.pricePerKmDelivery)));
+            }
+
+            function formatCurrency(amount) {
+                return new Intl.NumberFormat('vi-VN').format(Math.round(amount)) + ' VNĐ';
+            }
+
+            function showToast(type, message) {
+                const toast = document.createElement('div');
+                toast.className = `alert alert-${type} position-fixed`;
+                toast.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px; box-shadow: 0 4px 12px rgba(0,0,0,0.2);';
+                const icons = { success: 'check-circle', error: 'exclamation-circle', warning: 'exclamation-triangle', info: 'info-circle' };
+                toast.innerHTML = `<div class="d-flex align-items-center"><i class="fas fa-${icons[type]} me-2"></i><span>${message}</span><button type="button" class="btn-close ms-auto" onclick="this.parentElement.parentElement.remove()"></button></div>`;
+                document.body.appendChild(toast);
+                setTimeout(() => { toast.style.opacity = '0'; toast.style.transition = 'opacity 0.3s'; setTimeout(() => toast.remove(), 300); }, 3000);
+            }
+
+            async function reverseGeocode(lat, lng) {
+                try {
+                    const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&accept-language=vi&zoom=18`, { headers: { 'User-Agent': 'CarRentalApp/1.0' } });
+                    const data = await response.json();
+                    return data.display_name || `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+                } catch { return `${lat.toFixed(4)}, ${lng.toFixed(4)}`; }
+            }
+
+            function createMap(id, lat, lng, zoom) {
+                console.log(`🗺️ Creating map: ${id}`);
+                const el = document.getElementById(id);
+                if (!el) { console.error(`❌ Element ${id} not found`); return null; }
+
+                el.style.height = '400px';
+                el.style.minHeight = '400px';
+
+                try {
+                    const map = L.map(id).setView([lat, lng], zoom);
+                    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
+                    setTimeout(() => { if (map) { map.invalidateSize(); console.log(`✅ ${id} resized`); } }, 200);
+                    return map;
+                } catch (err) { console.error(`❌ Failed to create ${id}:`, err); return null; }
+            }
+
+            function initCustomerMap() {
+                const lat = CONFIG.hasValidCarLocation ? CONFIG.carLat : 16.0471;
+                const lng = CONFIG.hasValidCarLocation ? CONFIG.carLng : 108.2068;
+                const zoom = CONFIG.hasValidCarLocation ? 13 : 6;
+
+                state.customerMap = createMap('customerMap', lat, lng, zoom);
+                if (!state.customerMap) return;
+
+                if (CONFIG.hasValidCarLocation) {
+                    // ✅ Car icon với styling tốt hơn
+                    const carIcon = L.divIcon({
+                        html: '<div style="text-align: center; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center;"><i class="fas fa-car" style="color: #dc3545; font-size: 24px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.4));"></i></div>',
+                        iconSize: [30, 30],
+                        className: 'car-marker-icon'
+                    });
+
+                    L.marker([CONFIG.carLat, CONFIG.carLng], { icon: carIcon })
+                        .addTo(state.customerMap)
+                        .bindPopup(`<strong>Vị trí xe</strong><br>${CONFIG.carLocation}`);
+
+                    // ✅ Delivery circle với interactive: false
+                    if (CONFIG.hasDeliveryService && CONFIG.maxDeliveryDistance > 0) {
+                        L.circle([CONFIG.carLat, CONFIG.carLng], {
+                            color: '#28a745',
+                            fillColor: '#28a745',
+                            fillOpacity: 0.1,
+                            radius: CONFIG.maxDeliveryDistance * 1000,
+                            interactive: false,  // ✅ CHO PHÉP CLICK QUA VÒNG TRÒN
+                            weight: 2
+                        }).addTo(state.customerMap);
+
+                        // ✅ Thêm label cho radius
+                        const radiusLabel = L.marker([CONFIG.carLat, CONFIG.carLng], {
+                            icon: L.divIcon({
+                                html: `<div style="background: rgba(40, 167, 69, 0.8); color: white; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; white-space: nowrap;">Phạm vi: ${CONFIG.maxDeliveryDistance} km</div>`,
+                                className: 'radius-label',
+                                iconSize: [150, 30],
+                                iconAnchor: [75, -15]
+                            }),
+                            interactive: false
+                        }).addTo(state.customerMap);
+                    }
+                }
+
+                state.customerMap.on('click', (e) => setLocation('customer', e.latlng.lat, e.latlng.lng));
+            }
+
+            function initReturnMap() {
+                // ✅ LOẠI BỎ - không cần map trả xe nữa
+                console.log('ℹ️ Return map removed - using pickup location for return');
+            }
+
+            async function setLocation(type, lat, lng) {
+                const map = type === 'customer' ? state.customerMap : state.returnMap;
+                const marker = type === 'customer' ? 'customerMarker' : 'returnMarker';
+                const color = type === 'customer' ? '#007bff' : '#28a745';
+
+                if (state[marker]) map.removeLayer(state[marker]);
+
+                // ✅ Marker icon với styling tốt hơn
+                const icon = L.divIcon({
+                    html: `<div style="text-align: center; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;"><i class="fas fa-map-marker-alt" style="color: ${color}; font-size: 36px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.4));"></i></div>`,
+                    iconSize: [40, 40],
+                    iconAnchor: [20, 40],
+                    className: `${type}-marker-icon`
+                });
+
+                state[marker] = L.marker([lat, lng], { icon }).addTo(map);
+                map.setView([lat, lng], 15);
+
+                document.getElementById(`${type}Latitude`).value = lat.toFixed(6);
+                document.getElementById(`${type}Longitude`).value = lng.toFixed(6);
+
+                const address = await reverseGeocode(lat, lng);
+                document.getElementById(`${type}Location${type === 'customer' ? 'Name' : ''}`).value = address;
+
+                if (type === 'customer') {
+                    document.getElementById('customerCoordinates').value = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+                    const addrField = document.getElementById('customerAddress');
+                    if (!addrField.value.trim()) addrField.value = address;
+
+                    // ✅ TỰ ĐỘNG SET RETURN LOCATION = PICKUP LOCATION
+                    document.getElementById('returnLatitude').value = lat.toFixed(6);
+                    document.getElementById('returnLongitude').value = lng.toFixed(6);
+                    document.getElementById('returnLocation').value = address;
+                    console.log('✅ Auto-set return location same as pickup');
+
+                    if (CONFIG.hasValidCarLocation) {
+                        const distance = calculateDistance(CONFIG.carLat, CONFIG.carLng, lat, lng);
+                        const fee = calculateDeliveryFee(distance);
+
+                        if (fee === -1) {
+                            state.currentDeliveryFee = 0;
+                            document.getElementById('deliveryDistance').innerHTML = `<span class="text-danger">${distance.toFixed(1)} km (Ngoài phạm vi)</span>`;
+                            document.getElementById('deliveryFeeText').innerHTML = '<span class="text-danger">Ngoài phạm vi</span>';
+                            document.getElementById('summaryDeliveryFee').innerHTML = '<span class="text-danger">0 VNĐ</span>';
+                            showToast('warning', `Khoảng cách ${distance.toFixed(1)} km vượt quá ${CONFIG.maxDeliveryDistance} km`);
+                        } else {
+                            state.currentDeliveryFee = fee;
+                            document.getElementById('deliveryDistance').textContent = `${distance.toFixed(1)} km`;
+                            document.getElementById('deliveryFeeText').textContent = formatCurrency(fee);
+                            document.getElementById('summaryDeliveryFee').textContent = formatCurrency(fee);
+                            showToast('success', `Phí giao xe: ${formatCurrency(fee)}`);
+                        }
+                        updateSummary();
+                    }
+                }
+
+                state[marker].bindPopup(`<strong>Vị trí ${type === 'customer' ? 'giao' : 'trả'} xe</strong><br>${address}`).openPopup();
+            }
+
+            function updateSummary() {
+                const start = document.getElementById('startDate').value;
+                const end = document.getElementById('endDate').value;
+                if (!start || !end) return;
+
+                const startTime = new Date(start);
+                const endTime = new Date(end);
+                const diffMs = endTime - startTime;
+                
+                if (diffMs <= 0) {
+                    showToast('error', 'Ngày trả xe phải sau ngày nhận xe');
+                    return;
+                }
+
+                const serviceType = document.querySelector('input[name="serviceType"]:checked')?.value;
+                let rentalCost = 0;
+                let durationText = '';
+                let pricePerUnitText = '';
+
+                // ✅ THUÊ THEO GIỜ
+                if (state.rentalType === 'hour') {
+                    const hours = Math.ceil(diffMs / 3600000); // Convert to hours
+                    
+                    // Validation
+                    if (hours < 4) {
+                        showToast('warning', 'Thuê theo giờ tối thiểu 4 giờ');
+                        document.getElementById('durationText').innerHTML = `<span class="text-danger">Thời gian thuê: ${hours} giờ (Tối thiểu 4 giờ)</span>`;
+                        return;
+                    }
+                    
+                    if (hours >= 24) {
+                        showToast('warning', 'Từ 24 giờ trở lên vui lòng chọn thuê theo ngày');
+                        document.getElementById('durationText').innerHTML = `<span class="text-danger">Thời gian thuê: ${hours} giờ (Vui lòng chọn thuê theo ngày)</span>`;
+                        return;
+                    }
+
+                    if (!CONFIG.hasPricePerHour) {
+                        showToast('error', 'Xe này không hỗ trợ thuê theo giờ');
+                        return;
+                    }
+
+                    rentalCost = hours * parseFloat(CONFIG.pricePerHour);
+                    durationText = `${hours} giờ`;
+                    pricePerUnitText = `• Giá: <strong>${formatCurrency(parseFloat(CONFIG.pricePerHour))}/giờ</strong>`;
+                }
+                // ✅ THUÊ THEO NGÀY
+                else {
+                    const days = Math.max(1, Math.ceil(diffMs / 86400000)); // Convert to days
+                    rentalCost = days * parseFloat(CONFIG.pricePerDay);
+                    durationText = `${days} ngày`;
+                    pricePerUnitText = `• Giá: <strong>${formatCurrency(parseFloat(CONFIG.pricePerDay))}/ngày</strong>`;
+                }
+
+                // ✅ PHÍ TÀI XẾ (HARDCODED)
+                let driverFee = 0;
+                if (serviceType === '2' ) { // Có tài xế
+                    if (state.rentalType === 'hour') {
+                        const hours = Math.ceil(diffMs / 3600000);
+                        driverFee = hours * parseFloat(CONFIG.driverFeePerHour);
+                    } else {
+                        const days = Math.max(1, Math.ceil(diffMs / 86400000));
+                        driverFee = days * parseFloat(CONFIG.driverFeePerDay);
+                    }
+                }
+
+                const totalCost = rentalCost + state.currentDeliveryFee + driverFee;
+                document.getElementById('summaryDuration').innerText = durationText;
+                document.getElementById('summaryCarPrice').innerText = formatCurrency(rentalCost);
+                document.getElementById('summaryDriverFee').innerText = formatCurrency(driverFee);
+                document.getElementById('summaryDeliveryFee').innerText = formatCurrency(state.currentDeliveryFee);
+                document.getElementById('summaryTotal').innerHTML = `<strong>${formatCurrency(totalCost)}</strong>`;
+
+                // Đặc biệt với thuê theo giờ: cập nhật thêm thông tin
+                if (state.rentalType === 'hour') {
+                    const hours = Math.ceil(diffMs / 3600000);
+                    const excessHours = Math.max(0, hours - 8);
+                    const excessFee = excessHours * parseFloat(CONFIG.driverFeePerHour);
+
+                    document.getElementById('hourlyRentalWarning').style.display = 'block';
+                    document.getElementById('summaryDriverFee').innerHTML = `${formatCurrency(driverFee)} (${excessHours} giờ phụ trội)`;
+                    document.getElementById('summaryTotal').innerHTML = `<strong>${formatCurrency(totalCost + excessFee)}</strong>`;
+                } else {
+                    document.getElementById('hourlyRentalWarning').style.display = 'none';
+                }
+            }
+
+            // INIT
+            setTimeout(() => {
+                console.log('🗺️ Initializing maps...');
+                initCustomerMap();
+                updateSummary();
+                console.log('✅ All initialized');
+                if (CONFIG.hasValidCarLocation) showToast('info', `Vị trí xe: ${CONFIG.carLocation}. Phạm vi: ${CONFIG.maxDeliveryDistance} km`);
+            }, 300);
+
+            document.getElementById('endDate')?.addEventListener('change', updateSummary);
+            document.querySelectorAll('input[name="serviceType"]').forEach(input => input.addEventListener('change', () => {
+                updateSummary();
+                // ✅ Show/hide driver fee row
+                const driverRow = document.querySelector('.driver-fee');
+                if (driverRow) {
+                    driverRow.style.display = input.value === '2' ? 'flex' : 'none';
+                }
+            }));
+        }
+
+    })();
+</script>

@@ -1,0 +1,167 @@
+@model IEnumerable<DriverRequest>
+@{
+    ViewData["Title"] = "Yêu cầu làm tài xế";
+}
+
+<div class="container-fluid py-4">
+    <div class="card shadow">
+        <div class="card-header bg-primary text-white">
+            <div class="d-flex justify-content-between align-items-center">
+                <h3 class="mb-0">
+                    <i class="fas fa-user-check"></i> @ViewData["Title"]
+                </h3>
+                <a asp-action="MyDrivers" class="btn btn-light btn-sm">
+                    <i class="fas fa-users"></i> Tài xế của tôi
+                </a>
+            </div>
+        </div>
+        <div class="card-body">
+            @if (!Model.Any())
+            {
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle"></i>
+                    Chưa có yêu cầu nào.
+                </div>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Ngày gửi</th>
+                                <th>Người yêu cầu</th>
+                                <th>CCCD/CMND</th>
+                                <th>GPLX</th>
+                                <th>Kinh nghiệm</th>
+                                <th>Trạng thái</th>
+                                <th>Thao tác</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var request in Model)
+                            {
+                                <tr>
+                                    <td>@request.RequestedAt.ToString("dd/MM/yyyy HH:mm")</td>
+                                    <td>
+                                        <strong>@request.User.FullName</strong><br />
+                                        <small class="text-muted">
+                                            <i class="fas fa-envelope"></i> @request.User.Email<br />
+                                            <i class="fas fa-phone"></i> @request.User.PhoneNumber
+                                        </small>
+                                    </td>
+                                    <td>@request.NationalId</td>
+                                    <td>@request.DriverLicense</td>
+                                    <td>
+                                        @if (!string.IsNullOrEmpty(request.Experience))
+                                        {
+                                            <small>@request.Experience</small>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">-</span>
+                                        }
+                                    </td>
+                                    <td>
+                                        @if (request.Status == DriverRequestStatus.Pending)
+                                        {
+                                            <span class="badge bg-warning text-dark">
+                                                <i class="fas fa-clock"></i> Chờ duyệt
+                                            </span>
+                                        }
+                                        else if (request.Status == DriverRequestStatus.Approved)
+                                        {
+                                            <span class="badge bg-success">
+                                                <i class="fas fa-check"></i> Đã duyệt
+                                            </span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-danger">
+                                                <i class="fas fa-times"></i> Từ chối
+                                            </span>
+                                        }
+                                    </td>
+                                    <td>
+                                        @if (request.Status == DriverRequestStatus.Pending)
+                                        {
+                                            <div class="btn-group-vertical btn-group-sm" role="group">
+                                                <!-- ✅ Approve với lương cố định 500k -->
+                                                <form asp-action="Approve" method="post" class="mb-1" 
+                                                      onsubmit="return confirm('Xác nhận duyệt tài xế này với lương 500,000 VNĐ/ngày?')">
+                                                    @Html.AntiForgeryToken()
+                                                    <input type="hidden" name="id" value="@request.DriverRequestId" />
+                                                    <button type="submit" class="btn btn-success btn-sm w-100">
+                                                        <i class="fas fa-check me-1"></i>Duyệt (500K/ngày)
+                                                    </button>
+                                                </form>
+                                                
+                                                <!-- Reject -->
+                                                <button type="button" class="btn btn-danger btn-sm w-100" 
+                                                        onclick="showRejectModal(@request.DriverRequestId, '@Html.Raw(request.User.FullName)')">
+                                                    <i class="fas fa-times me-1"></i>Từ chối
+                                                </button>
+                                            </div>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">Đã xử lý</span>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<!-- Reject Modal -->
+<div class="modal fade" id="rejectModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">
+                    <i class="fas fa-times-circle me-2"></i>Từ chối yêu cầu
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form asp-action="Reject" method="post" id="rejectForm">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="id" id="rejectRequestId" />
+                <div class="modal-body">
+                    <p>Từ chối yêu cầu của: <strong id="rejectUserName"></strong></p>
+                    <div class="mb-3">
+                        <label for="reason" class="form-label">Lý do từ chối</label>
+                        <textarea name="reason" id="reason" class="form-control" rows="3" 
+                                  placeholder="Nhập lý do từ chối..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-danger">
+                        <i class="fas fa-times"></i> Từ chối
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        let rejectModal;
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            rejectModal = new bootstrap.Modal(document.getElementById('rejectModal'));
+        });
+        
+        function showRejectModal(requestId, userName) {
+            document.getElementById('rejectRequestId').value = requestId;
+            document.getElementById('rejectUserName').textContent = userName;
+            rejectModal.show();
+        }
+    </script>
+}
