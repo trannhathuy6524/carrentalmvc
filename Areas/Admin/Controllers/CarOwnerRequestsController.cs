@@ -30,6 +30,8 @@ namespace carrentalmvc.Areas.Admin.Controllers
         }
 
         // GET: Admin/CarOwnerRequests
+        [HttpGet]
+        [Route("Admin/CarOwnerRequests")]
         public async Task<IActionResult> Index(CarOwnerRequestStatus? status)
         {
             var query = _context.CarOwnerRequests
@@ -51,6 +53,8 @@ namespace carrentalmvc.Areas.Admin.Controllers
         }
 
         // GET: Admin/CarOwnerRequests/Details/5
+        [HttpGet]
+        [Route("Admin/CarOwnerRequests/Details/{id}")]
         public async Task<IActionResult> Details(int id)
         {
             var request = await _context.CarOwnerRequests
@@ -69,6 +73,7 @@ namespace carrentalmvc.Areas.Admin.Controllers
 
         // POST: Admin/CarOwnerRequests/Approve/5
         [HttpPost]
+        [Route("Admin/CarOwnerRequests/Approve/{id}")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Approve(int id)
         {
@@ -138,6 +143,7 @@ namespace carrentalmvc.Areas.Admin.Controllers
 
         // POST: Admin/CarOwnerRequests/Reject/5
         [HttpPost]
+        [Route("Admin/CarOwnerRequests/Reject/{id}")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Reject(int id, string reason)
         {
