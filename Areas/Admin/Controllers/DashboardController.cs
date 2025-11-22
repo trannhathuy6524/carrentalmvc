@@ -28,6 +28,8 @@ namespace carrentalmvc.Areas.Admin.Controllers
             _logger = logger;
         }
 
+        [HttpGet]
+        [Route("Admin/Dashboard")]
         public async Task<IActionResult> Index()
         {
             try
@@ -116,6 +118,8 @@ namespace carrentalmvc.Areas.Admin.Controllers
             }
         }
 
+        [HttpGet]
+        [Route("Admin/Dashboard/MonthlyRevenueData")]
         private async Task<List<object>> GetMonthlyRevenueDataAsync()
         {
             var result = new List<object>();
@@ -139,6 +143,8 @@ namespace carrentalmvc.Areas.Admin.Controllers
             return result;
         }
 
+        [HttpGet]
+        [Route("Admin/Dashboard/CarStatusData")]
         private List<object> GetCarStatusData(IEnumerable<Car> cars)
         {
             var statusGroups = cars.GroupBy(c => c.Status);
@@ -158,6 +164,8 @@ namespace carrentalmvc.Areas.Admin.Controllers
             }).Cast<object>().ToList();
         }
 
+        [HttpGet]
+        [Route("Admin/Dashboard/CarStatusText")]
         private string GetCarStatusText(CarStatus status)
         {
             return status switch
@@ -170,6 +178,8 @@ namespace carrentalmvc.Areas.Admin.Controllers
             };
         }
 
+        [HttpGet]
+        [Route("Admin/Dashboard/RentalStatusText")]
         private string GetRentalStatusText(RentalStatus status)
         {
             return status switch
@@ -186,6 +196,7 @@ namespace carrentalmvc.Areas.Admin.Controllers
 
         // API endpoint để lấy dữ liệu biểu đồ (nếu cần cho AJAX)
         [HttpGet]
+        [Route("Admin/Dashboard/RevenueChartData")]
         public async Task<JsonResult> GetRevenueChartData()
         {
             try
@@ -201,6 +212,7 @@ namespace carrentalmvc.Areas.Admin.Controllers
         }
 
         [HttpGet]
+        [Route("Admin/Dashboard/CarStatusChartData")]
         public async Task<JsonResult> GetCarStatusChartData()
         {
             try
